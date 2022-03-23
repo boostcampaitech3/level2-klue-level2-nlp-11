@@ -125,8 +125,9 @@ def train():
                                 # `no`: No evaluation during training.
                                 # `steps`: Evaluate every `eval_steps`.
                                 # `epoch`: Evaluate every end of epoch.
-    eval_steps = 500,            # evaluation step.
-    load_best_model_at_end = True 
+    eval_steps = 100,            # evaluation step.
+    load_best_model_at_end = True,
+	report_to='wandb'
   )
   trainer = Trainer(
     model=model,                         # the instantiated 🤗 Transformers model to be trained
@@ -139,7 +140,7 @@ def train():
 
   # train model
   trainer.train()
-  model.save_pretrained(f'./220322_{MODEL_NAME}')
+  model.save_pretrained(f'./best_model')
 def main():
   train()
 
