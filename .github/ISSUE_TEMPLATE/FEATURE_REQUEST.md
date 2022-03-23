@@ -1,3 +1,11 @@
+---
+name: Feature Request
+about: suggest an idea for this project
+title: ''
+labels: 'feauture'
+assignees: 'username'
+---
+
 ## 기능 추가
 필요한 기능을 적어주세요.
 
