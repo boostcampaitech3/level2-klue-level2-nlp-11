@@ -1,3 +1,12 @@
+---
+name: Bug Reoport
+about: inform an bug for this project
+title: ''
+labels: 'bug'
+assignees: 'username'
+---
+
+
 ## 버그 설명
 어떤 버그인지 자세하게 알려주세요.
 
