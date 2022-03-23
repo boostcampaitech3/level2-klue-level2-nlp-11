@@ -8,7 +8,6 @@ from sklearn.metrics import accuracy_score, recall_score, precision_score, f1_sc
 from transformers import AutoTokenizer, AutoConfig, AutoModelForSequenceClassification, Trainer, TrainingArguments, RobertaConfig, RobertaTokenizer, RobertaForSequenceClassification, BertTokenizer
 from load_data import *
 import wandb
-# test
 
 wandb.init(project='klue',entity='klue')
 
