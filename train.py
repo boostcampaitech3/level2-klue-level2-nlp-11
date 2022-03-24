@@ -97,7 +97,7 @@ def train():
 
     print(device)
     # setting model hyperparameter
-    model_config =  AutoConfig.from_pretrained(MODEL_NAME)
+    model_config =  AutoConfig.from_pretrained(MODEL_NAME, num_hidden_layers = 6)
     model_config.num_labels = 30
 
     model =  AutoModelForSequenceClassification.from_pretrained(MODEL_NAME, config=model_config)
