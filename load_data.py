@@ -71,7 +71,7 @@ def split_data(dataset):
 def tokenized_dataset(dataset, tokenizer):
     """ tokenizer에 따라 sentence를 tokenizing 합니다."""
     concat_entity = []
-    for e01, e02 in zip(dataset['subject_entity'], dataset['object_entity']):
+    for e01, e02 in zip(dataset['sub_word'], dataset['obj_word']):
         temp = ''
         temp = e01 + '[SEP]' + e02
         concat_entity.append(temp)
