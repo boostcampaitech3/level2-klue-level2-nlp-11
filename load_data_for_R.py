@@ -5,16 +5,21 @@ from ast import literal_eval
 import torch
 from tqdm import tqdm
 from transformers import AutoTokenizer
+from sklearn.model_selection import StratifiedShuffleSplit
 
 
 class RE_Dataset_for_R(torch.utils.data.Dataset):
-    def __init__(self, tokenized_dataset, labels):
+    def __init__(self, tokenized_dataset, labels, train=True):
         self.tokenized_dataset = tokenized_dataset
         self.labels = labels
+        self.train = train
     
     def __getitem__(self, idx):
         item = {key: torch.tensor(val[idx]) for key, val in self.tokenized_dataset.items()}
-        item['labels'] = torch.tensor(self.labels[idx], dtype=torch.long)
+        if self.train:
+            item['labels'] = torch.tensor(self.labels[idx], dtype=torch.long)
+        else:
+            item['labels'] = torch.tensor(0, dtype=torch.long)
         return item
 
     def __len__(self):
@@ -26,18 +31,6 @@ def preprocessing_dataset_for_R(dataset):
     # subject_entity와 object_entity의 위치 정보를 가져와서
     # 위치 정보에 맞춰서 토큰 삽입
     # dataset['']
-    label_list = ['no_relation', 'org:top_members/employees', 'org:members',
-       'org:product', 'per:title', 'org:alternate_names',
-       'per:employee_of', 'org:place_of_headquarters', 'per:product',
-       'org:number_of_employees/members', 'per:children',
-       'per:place_of_residence', 'per:alternate_names',
-       'per:other_family', 'per:colleagues', 'per:origin', 'per:siblings',
-       'per:spouse', 'org:founded', 'org:political/religious_affiliation',
-       'org:member_of', 'per:parents', 'org:dissolved',
-       'per:schools_attended', 'per:date_of_death', 'per:date_of_birth',
-       'per:place_of_birth', 'per:place_of_death', 'org:founded_by',
-       'per:religion']
-
     sub_df = dataset['subject_entity'].apply(pd.Series).add_prefix('sub_')
     obj_df = dataset['object_entity'].apply(pd.Series).add_prefix('obj_')
     dataset = pd.concat([dataset, sub_df], axis=1)
@@ -65,7 +58,7 @@ def preprocessing_dataset_for_R(dataset):
             + sent[end_1+1:] + '</s>'
 
         sentence.append(sent)
-        labels.append(label_list.index(label))
+        labels.append(label)
 
     out_dataset = pd.DataFrame({'sentence':sentence, 'label':labels})
 
@@ -78,6 +71,15 @@ def load_data_for_R(dataset_dir):
     dataset = preprocessing_dataset_for_R(pd_dataset)
 
     return dataset
+
+
+def split_data(dataset):
+    split = StratifiedShuffleSplit(n_splits=1, test_size=0.1, random_state=42)
+    for train_index, dev_index in split.split(dataset, dataset["label"]):
+        train_dataset = dataset.loc[train_index]
+        dev_dataset = dataset.loc[dev_index]
+    
+    return train_dataset,dev_dataset
 
 
 def convert_sentence_to_features(dataset, tokenizer, max_len):
@@ -93,7 +95,7 @@ def convert_sentence_to_features(dataset, tokenizer, max_len):
     m_len = 0
     for sent, label in zip(dataset['sentence'], dataset['label']):
         token = tokenizer.tokenize(sent)
-        print(token)
+
         m_len = max(m_len, len(token))
         subs_p = token.index('[SUBS]')
         sube_p = token.index('[SUBE]')
@@ -141,4 +143,11 @@ def convert_sentence_to_features(dataset, tokenizer, max_len):
         'obj_mask': torch.tensor(all_obj_mask)
     }
 
-    return RE_Dataset_for_R(all_features, all_label)
+    return all_features, all_label
+
+# tokenizer = AutoTokenizer.from_pretrained('./vocab')
+# dataset = load_data_for_R('../dataset/train/train.csv')
+# print(dataset[:5])
+# features, labels = convert_sentence_to_features(dataset[:5], tokenizer, 256)
+# print({key: torch.tensor(val[0]) for key, val in features.items()})
+# print(labels)
