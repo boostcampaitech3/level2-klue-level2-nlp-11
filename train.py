@@ -119,7 +119,8 @@ def train():
       weight_decay=0.01,               # strength of weight decay
       logging_dir='./logs',            # directory for storing logs
       logging_steps=100,              # log saving step.
-      evaluation_strategy='steps', # evaluation strategy to adopt during training
+      evaluation_strategy='epoch'
+      save_strategy='epoch', # evaluation strategy to adopt during training
                                   # `no`: No evaluation during training.
                                   # `steps`: Evaluate every `eval_steps`.
                                   # `epoch`: Evaluate every end of epoch.
