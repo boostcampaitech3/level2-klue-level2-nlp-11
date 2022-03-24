@@ -71,22 +71,34 @@ def split_data(dataset):
 def tokenized_dataset(dataset, tokenizer):
     """ tokenizer에 따라 sentence를 tokenizing 합니다."""
     concat_entity = []
-    for e01, e02 in zip(dataset['subject_entity'], dataset['object_entity']):
+    for sentence, sub, obj, sub_start, sub_end, obj_start, obj_end in zip(dataset['sentence'], dataset['sub_word'], dataset['obj_word'],dataset['sub_start_idx'],dataset['sub_end_idx'],dataset['obj_start_idx'],dataset['obj_end_idx']):
         temp = ''
-        temp = e01 + '[SEP]' + e02
+        sub = '[SUBS]' + sub + '[SUBE]'
+        obj = '[OBJS]' + obj + '[OBJE]'
+        if sub_start <obj_start :
+            temp = sentence[:sub_start] + sub + sentence[sub_end:obj_start] + obj + sentence[obj_end:]
+        else:
+            temp = sentence[:obj_start] + obj + sentence[obj_end:sub_start] + sub + sentence[sub_end:]
         concat_entity.append(temp)
         
     tokenized_sentences = tokenizer(
         concat_entity,
-        list(dataset['sentence']),
         return_tensors="pt",
         padding=True,
         truncation=True,
         max_length=256,
         add_special_tokens=True,
         )
+    for idx in range(len(tokenized_sentences['token_type_ids'])):
+        tokens=tokenized_sentences[idx].tokens
+        sub_start = tokens.index('[SUBS]')
+        sub_end = tokens.index('[SUBE]')
+        obj_start = tokens.index('[OBJS]')
+        obj_end = tokens.index('[OBJE]')
+        tokenized_sentences['token_type_ids'][idx][sub_start+1:sub_end] = torch.tensor([1]*(sub_end-sub_start-1))
+        tokenized_sentences['token_type_ids'][idx][obj_start+1:obj_end] = torch.tensor([1]*(obj_end-obj_start-1))
     return tokenized_sentences
-  
+
 def oneParenthesis(matchobj):
     string = matchobj[0]
     return string[:len(string)//2]

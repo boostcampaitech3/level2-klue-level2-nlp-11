@@ -66,9 +66,10 @@ def main(args):
   device = torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
   # load tokenizer
   Tokenizer_NAME = 'monologg/kobigbird-bert-base'
-  tokenizer = AutoTokenizer.from_pretrained(Tokenizer_NAME)
+  tokenizer = AutoTokenizer.from_pretrained('/opt/ml/code/vocabs')
 
   ## load my model
+  
   MODEL_NAME = args.model_dir # model dir.
   model = AutoModelForSequenceClassification.from_pretrained(args.model_dir)
   model.parameters
