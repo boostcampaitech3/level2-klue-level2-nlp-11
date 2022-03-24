@@ -4,6 +4,8 @@ import pandas as pd
 from ast import literal_eval
 import torch
 from sklearn.model_selection import StratifiedShuffleSplit
+import re
+import hanja
 
 class RE_Dataset(torch.utils.data.Dataset):
     """ Dataset 구성을 위한 class."""
@@ -21,12 +23,32 @@ class RE_Dataset(torch.utils.data.Dataset):
 
 def preprocessing_dataset(dataset):
     """ 처음 불러온 csv 파일을 원하는 형태의 DataFrame으로 변경 시켜줍니다."""
+    #기존 데이터셋 entity열에 저장된 word, start_idx, end_idx, sub_type 값들을 각 열에 풀어서 연장
     sub_df = dataset['subject_entity'].apply(pd.Series).add_prefix('sub_')
     obj_df = dataset['object_entity'].apply(pd.Series).add_prefix('obj_')
     dataset = pd.concat([dataset, sub_df], axis=1)
     dataset = pd.concat([dataset, obj_df], axis=1)
     #dataset = dataset.drop(['subject_entity', 'object_entity'], axis=1)
-
+    
+    
+    sentence = dataset['sentence'].values
+    subject_entity = dataset['sub_word'].values
+    object_entity = dataset['obj_word'].values
+    
+    pattern_list = [re.compile(r'(\([가-힣\w\s]+\))\1'), re.compile(r'[一-龥]'), re.compile(r'\([\d]{1,2}\)')]
+    replace_list = [oneParenthesis, hanjaToHangeul, '']
+    target_col_list = [[sentence], [sentence, subject_entity, object_entity], [sentence]]
+    
+    for pat, repl, target_col in zip(pattern_list, replace_list, target_col_list):
+        for tgt in target_col:
+            for i in range(len(dataset)):
+                if pat.search(tgt[i]):
+                    tgt[i] = pat.sub(repl, tgt[i])
+    
+    dataset['sentence'] = sentence
+    dataset['sub_word'] = subject_entity
+    dataset['obj_word'] = object_entity
+    
     return dataset
 
 def load_data(dataset_dir):
@@ -45,10 +67,11 @@ def split_data(dataset):
     
     return train_dataset,dev_dataset
 
+
 def tokenized_dataset(dataset, tokenizer):
     """ tokenizer에 따라 sentence를 tokenizing 합니다."""
     concat_entity = []
-    for e01, e02 in zip(dataset['sub_word'], dataset['obj_word']):
+    for e01, e02 in zip(dataset['subject_entity'], dataset['object_entity']):
         temp = ''
         temp = e01 + '[SEP]' + e02
         concat_entity.append(temp)
@@ -63,3 +86,10 @@ def tokenized_dataset(dataset, tokenizer):
         add_special_tokens=True,
         )
     return tokenized_sentences
+  
+def oneParenthesis(matchobj):
+    string = matchobj[0]
+    return string[:len(string)//2]
+
+def hanjaToHangeul(matchobj):
+    return hanja.translate(matchobj[0], 'substitution')
