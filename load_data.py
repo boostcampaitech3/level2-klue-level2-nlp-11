@@ -35,8 +35,8 @@ def preprocessing_dataset(dataset):
     subject_entity = dataset['sub_word'].values
     object_entity = dataset['obj_word'].values
     
-    pattern_list = [re.compile(r'(\([가-힣\w\s]+\))\1'), re.compile(r'[一-龥]'), re.compile(r'\([\d]{1,2}\)')]
-    replace_list = [oneParenthesis, hanjaToHangeul, '']
+    pattern_list = [re.compile(r'(\([가-힣\w\s]+\))\1|\"\"'), re.compile(r'[一-龥]'), re.compile(r'\([\d]{1,2}\)|\(\)')]
+    replace_list = [halfLenStr, hanjaToHangeul, '']
     target_col_list = [[sentence], [sentence, subject_entity, object_entity], [sentence]]
     
     for pat, repl, target_col in zip(pattern_list, replace_list, target_col_list):
@@ -56,7 +56,7 @@ def load_data(dataset_dir):
     pd_dataset = pd.read_csv(dataset_dir, 
                 converters={'subject_entity':literal_eval, 'object_entity':literal_eval})
     dataset = preprocessing_dataset(pd_dataset)
-    
+    dataset.to_csv("/opt/ml/tt/아무거나.csv")
     return dataset
 
 def split_data(dataset):
@@ -87,7 +87,7 @@ def tokenized_dataset(dataset, tokenizer):
         )
     return tokenized_sentences
   
-def oneParenthesis(matchobj):
+def halfLenStr(matchobj):
     string = matchobj[0]
     return string[:len(string)//2]
 
