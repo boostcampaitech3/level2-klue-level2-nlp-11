@@ -24,9 +24,8 @@ def preprocessing_dataset(dataset):
   """ 처음 불러온 csv 파일을 원하는 형태의 DataFrame으로 변경 시켜줍니다."""
   subject_entity = []
   object_entity = []
-  sentence = []
-  new_se=[]
-  new_oe=[]
+  sentence = dataset['sentence'].values
+
   for i,j in zip(dataset['subject_entity'], dataset['object_entity']):
     i = i[1:-1].split(',')[0].split(':')[1]
     j = j[1:-1].split(',')[0].split(':')[1]
@@ -34,27 +33,17 @@ def preprocessing_dataset(dataset):
     subject_entity.append(i)
     object_entity.append(j)
   
-  # pat = re.compile(r'(\([가-힣\w\s]+\))\1')
-  # for s in dataset['sentence']:
-  #   if pat.search(s):
-  #     s = pat.sub(repl, s)
-  #   sentence.append(s)
+  pattern_list = [re.compile(r'(\([가-힣\w\s]+\))\1'), re.compile(r'[一-龥]'), re.compile(r'\([\d]{1,2}\)')]
+  replace_list = [oneParenthesis, hanjaToHangeul, '']
+  target_col_list = [[sentence], [sentence, subject_entity, object_entity], [sentence]]
+
+  for pat, repl, target_col in zip(pattern_list, replace_list, target_col_list):
+    for tgt in target_col:
+      for i in range(len(dataset)):
+        if pat.search(tgt[i]):
+          tgt[i] = pat.sub(repl, tgt[i])
   
-  pat = re.compile(r'[一-龥]')
-  for i,j,k in zip(dataset['sentence'], subject_entity, object_entity):
-    if pat.search(i):
-      i = pat.sub(hanjaToHangel, i)
-    sentence.append(i)
-    
-    if pat.search(j):
-      j = pat.sub(hanjaToHangel, j)
-    new_se.append(j)
-    
-    if pat.search(k):
-      k = pat.sub(hanjaToHangel, k)
-    new_oe.append(k)
-  
-  out_dataset = pd.DataFrame({'id':dataset['id'], 'sentence':sentence,'subject_entity':new_se,'object_entity':new_oe,'label':dataset['label'],})
+  out_dataset = pd.DataFrame({'id':dataset['id'], 'sentence':sentence,'subject_entity':subject_entity,'object_entity':object_entity,'label':dataset['label'],})
   return out_dataset
 
 def load_data(dataset_dir):
@@ -91,9 +80,9 @@ def tokenized_dataset(dataset, tokenizer):
       )
   return tokenized_sentences
 
-def repl(matchobj):
+def oneParenthesis(matchobj):
     string = matchobj[0]
     return string[:len(string)//2]
 
-def hanjaToHangel(matchobj):
+def hanjaToHangeul(matchobj):
     return hanja.translate(matchobj[0], 'substitution')
