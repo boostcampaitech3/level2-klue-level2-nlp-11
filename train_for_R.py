@@ -11,7 +11,7 @@ from load_data_for_R import *
 from model_for_R import R_BigBird
 import wandb
 
-# wandb.init(project='klue', entity='klue')
+wandb.init(project='klue', entity='klue')
 
 def klue_re_micro_f1(preds, labels):
     """KLUE-RE micro f1 (except no_relation)"""
@@ -71,7 +71,7 @@ def label_to_num(label):
 
 def train():
     # load model and tokenizer
-    tokenizer = AutoTokenizer.from_pretrained('./vocab')
+    tokenizer = AutoTokenizer.from_pretrained('./vocab_robertaLarge')
 
     # load dataset
     dataset = load_data_for_R('../dataset/train/train.csv')
@@ -99,7 +99,7 @@ def train():
 
     print(device)
     # setting model hyperparameter
-    model_config =  AutoConfig.from_pretrained('monologg/kobigbird-bert-base')
+    model_config =  AutoConfig.from_pretrained('klue/roberta-large')
     # model_config.num_labels = 30
 
     model = R_BigBird(model_config, 0.1)
@@ -113,10 +113,10 @@ def train():
       output_dir='./results',          # output directory
       save_total_limit=5,              # number of total save model.
       save_steps=500,                 # model saving step.
-      num_train_epochs=5,              # total number of training epochs
+      num_train_epochs=3,              # total number of training epochs
       learning_rate=5e-5,               # learning_rate
-      per_device_train_batch_size=64,  # batch size per device during training
-      per_device_eval_batch_size=64,   # batch size for evaluation
+      per_device_train_batch_size=32,  # batch size per device during training
+      per_device_eval_batch_size=32,   # batch size for evaluation
       warmup_steps=500,                # number of warmup steps for learning rate scheduler
       weight_decay=0.01,               # strength of weight decay
       logging_dir='./logs',            # directory for storing logs
@@ -127,7 +127,7 @@ def train():
                                   # `epoch`: Evaluate every end of epoch.
       eval_steps = 100,            # evaluation step.
       load_best_model_at_end = True, 
-    #   report_to='wandb'
+      report_to='wandb'
     )
     trainer = Trainer(
       model=model,                         # the instantiated 🤗 Transformers model to be trained
@@ -146,51 +146,3 @@ def main():
 
 if __name__ == '__main__':
     main()
-
-
-# class Trainer(object):
-#     def __init__(self, args, model_dir = None,train_dataset=None, dev_dataset=None, test_dataset=None,tokenizer=None):
-#         self.train_dataset = train_dataset
-#         self.dev_dataset = dev_dataset
-#         self.test_dataset = test_dataset
-#         self.tokenizer = tokenizer
-#         self.model_dir = model_dir 
-#         self.best_score = 0
-#         self.hold_epoch = 0
-
-#         self.eval_batch_size = args.eval_batch_size
-#         self.train_batch_size = args.train_batch_size
-#         self.max_steps = args.max_steps
-#         self.weight_decay = args.weight_decay
-#         self.learning_rate = args.learning_rate
-#         self.adam_epsilon= args.adam_epsilon
-#         self.warmup_steps = args.warmup_steps
-#         self.num_train_epochs = args.num_train_epochs
-#         self.logging_steps = args.logging_steps
-#         self.save_steps = args.save_steps
-#         self.max_grad_norm = args.max_grad_norm
-#         self.dropout_rate = args.dropout_rate
-#         self.classifier_epoch= args.classifier_epoch
-#         self.gradient_accumulation_steps = args.gradient_accumulation_steps
-        
-#         self.config = AutoConfig.from_pretrained(
-#             "monologg/kobigbird-bert-base",
-#             num_labels = 30
-#         )
-#         self.model = R_BigBird(
-#             config=self.config, 
-#             dropout_rate = self.dropout_rate,
-#         )
-
-#         # GPU or CPU
-#         self.device = "cuda" if torch.cuda.is_available() else "cpu"
-#         self.model.to(self.device)
-
-
-#     def train(self):
-#         train_sampler = RandomSampler(self.train_dataset)
-#         train_dataloader = DataLoader(
-#             self.train_dataset,
-#             sampler=train_sampler,
-#             batch_size=self.train_batch_size
-#         )

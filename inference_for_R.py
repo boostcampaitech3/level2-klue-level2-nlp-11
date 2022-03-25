@@ -9,7 +9,7 @@ import torch.nn.functional as F
 
 
 def inference(model, tokenized_sent, device):
-    dataloader = DataLoader(tokenized_sent, batch_size=64, shuffle=False)
+    dataloader = DataLoader(tokenized_sent, batch_size=32, shuffle=False)
     model.eval()
     output_pred = []
     output_prob = []
@@ -49,9 +49,9 @@ def num_to_label(label):
 device = torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
 print(device)
 
-tokenizer = AutoTokenizer.from_pretrained('./vocab')
+tokenizer = AutoTokenizer.from_pretrained('./vocab_robertaLarge')
 
-model_config =  AutoConfig.from_pretrained('monologg/kobigbird-bert-base')
+model_config =  AutoConfig.from_pretrained('klue/roberta-large')
 model = R_BigBird(model_config, 0.1)
 model.load_state_dict(torch.load('./best_model/pytorch_model.bin'))
 model.to(device)

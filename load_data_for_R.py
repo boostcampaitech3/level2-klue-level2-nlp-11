@@ -45,17 +45,17 @@ def preprocessing_dataset_for_R(dataset):
                                                         dataset['obj_end_idx'],
                                                         dataset['label']):
         if start_1 < start_2:
-            sent = '<s>' + sent[:start_1] + '[SUBS]' \
+            sent = '[CLS]' + sent[:start_1] + '[SUBS]' \
             + sent[start_1:end_1+1] + '[SUBE]' \
             + sent[end_1+1:start_2] + '[OBJS]' \
             + sent[start_2:end_2+1] + '[OBJE]' \
-            + sent[end_2+1:] + '</s>'
+            + sent[end_2+1:] + '[SEP]'
         else:
-            sent = '<s>' + sent[:start_2] + '[OBJS]' \
+            sent = '[CLS]' + sent[:start_2] + '[OBJS]' \
             + sent[start_2:end_2+1] + '[OBJE]' \
             + sent[end_2+1:start_1] + '[SUBS]' \
             + sent[start_1:end_1+1] + '[SUBE]' \
-            + sent[end_1+1:] + '</s>'
+            + sent[end_1+1:] + '[SEP]'
 
         sentence.append(sent)
         labels.append(label)
