@@ -6,6 +6,8 @@ import torch
 from tqdm import tqdm
 from transformers import AutoTokenizer
 from sklearn.model_selection import StratifiedShuffleSplit
+import re
+import hanja
 
 
 class RE_Dataset_for_R(torch.utils.data.Dataset):
@@ -35,6 +37,26 @@ def preprocessing_dataset_for_R(dataset):
     obj_df = dataset['object_entity'].apply(pd.Series).add_prefix('obj_')
     dataset = pd.concat([dataset, sub_df], axis=1)
     dataset = pd.concat([dataset, obj_df], axis=1)
+
+
+    sentence = dataset['sentence'].values
+    subject_entity = dataset['sub_word'].values
+    object_entity = dataset['obj_word'].values
+    
+    pattern_list = [re.compile(r'(\([가-힣\w\s]+\))\1|\"\"'), re.compile(r'[一-龥]'), re.compile(r'\([\d]{1,2}\)|\(\)')]
+    replace_list = [halfLenStr, hanjaToHangeul, '']
+    target_col_list = [[sentence], [sentence, subject_entity, object_entity], [sentence]]
+    
+    for pat, repl, target_col in zip(pattern_list, replace_list, target_col_list):
+        for tgt in target_col:
+            for i in range(len(dataset)):
+                if pat.search(tgt[i]):
+                    tgt[i] = pat.sub(repl, tgt[i])
+    
+    dataset['sentence'] = sentence
+    dataset['sub_word'] = subject_entity
+    dataset['obj_word'] = object_entity
+
 
     sentence = []
     labels = []
@@ -145,7 +167,16 @@ def convert_sentence_to_features(dataset, tokenizer, max_len):
 
     return all_features, all_label
 
-# tokenizer = AutoTokenizer.from_pretrained('./vocab')
+
+def halfLenStr(matchobj):
+    string = matchobj[0]
+    return string[:len(string)//2]
+
+def hanjaToHangeul(matchobj):
+    return hanja.translate(matchobj[0], 'substitution')
+
+
+# tokenizer = AutoTokenizer.from_pretrained('./vocab_robertaLarge')
 # dataset = load_data_for_R('../dataset/train/train.csv')
 # print(dataset[:5])
 # features, labels = convert_sentence_to_features(dataset[:5], tokenizer, 256)
