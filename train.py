@@ -9,8 +9,12 @@ from transformers import AutoTokenizer, AutoConfig, AutoModelForSequenceClassifi
 from load_data import *
 import wandb
 
+from transformers import DataCollatorForLanguageModeling, AutoModelForPreTraining
+from transformers.tokenization_utils import PreTrainedTokenizer
+
 
 wandb.init(project='klue',entity='klue')
+wandb.run.name = 'yonghee/kobigbird 3'
 
 def klue_re_micro_f1(preds, labels):
     """KLUE-RE micro f1 (except no_relation)"""
@@ -68,6 +72,7 @@ def label_to_num(label):
     
     return num_label
 
+
 def train():
     # load model and tokenizer
     # MODEL_NAME = "bert-base-uncased"
@@ -77,6 +82,7 @@ def train():
 
     # load dataset
     dataset = load_data("../dataset/train/train.csv")
+    test_dataset = load_data("../dataset/test/test_data.csv")
 
     train_dataset, dev_dataset= split_data(dataset)
 
@@ -84,22 +90,64 @@ def train():
     train_label = label_to_num(train_dataset['label'].values)
     dev_label = label_to_num(dev_dataset['label'].values)
 
+
+    dataset_label = label_to_num(dataset['label'].values)
+
     # tokenizing dataset
     #tokenized_train = tokenized_dataset(dataset, tokenizer)
     tokenized_train = tokenized_dataset(train_dataset, tokenizer)
     tokenized_dev = tokenized_dataset(dev_dataset, tokenizer)
+    tokenized_data = tokenized_dataset(dataset, tokenizer)
+    tokenized_test = tokenized_dataset(test_dataset, tokenizer)
 
     # make dataset for pytorch.
     RE_train_dataset = RE_Dataset(tokenized_train, train_label)
     RE_dev_dataset = RE_Dataset(tokenized_dev, dev_label)
+    RE_dataset = RE_Dataset(tokenized_data, dataset_label)
+
 
     device = torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
 
     print(device)
-    # setting model hyperparameter
-    model_config =  AutoConfig.from_pretrained(MODEL_NAME, num_hidden_layers = 6)
-    model_config.num_labels = 30
 
+    #@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
+#     data_collator = DataCollatorForLanguageModeling(    # [MASK] 를 씌우는 것은 저희가 구현하지 않아도 됩니다! :-)
+#         tokenizer=tokenizer, mlm=True, mlm_probability=0.15
+#     )
+#     model_config =  AutoConfig.from_pretrained(MODEL_NAME)
+#     model = AutoModelForPreTraining.from_pretrained(MODEL_NAME, config=model_config)
+#     model.num_parameters()
+#     model.parameters
+#     model.to(device)
+#     print("pretraining start")
+#     training_args = TrainingArguments(
+#         output_dir='model_output',
+#         overwrite_output_dir=True,
+#         num_train_epochs=100,
+#         per_gpu_train_batch_size=32,
+#         save_steps=1000,
+#         save_total_limit=2,
+#         logging_steps=100
+# )
+
+#     trainer = Trainer(
+#         model=model,
+#         args=training_args,
+#         data_collator=data_collator,
+#         train_dataset=RE_dataset
+#     )
+#     trainer.train()
+#     print("pretraining finish")
+#     print("save model")
+#     print("...")
+#     trainer.save_model('./model_output')
+#     print("done")
+    
+    #@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
+    # setting model hyperparameter
+    MODEL_NAME = 'monologg/kobigbird-bert-base'
+    model_config =  AutoConfig.from_pretrained(MODEL_NAME)
+    model_config.num_labels = 30
     model =  AutoModelForSequenceClassification.from_pretrained(MODEL_NAME, config=model_config)
     print(model.config)
     model.parameters
