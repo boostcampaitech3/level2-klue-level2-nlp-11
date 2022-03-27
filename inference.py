@@ -15,26 +15,54 @@ def inference(model, tokenized_sent, device):
     test dataset을 DataLoader로 만들어 준 후,
     batch_size로 나눠 model이 예측 합니다.
   """
-  dataloader = DataLoader(tokenized_sent, batch_size=16, shuffle=False)
-  model.eval()
-  output_pred = []
-  output_prob = []
-  for i, data in enumerate(tqdm(dataloader)):
-    with torch.no_grad():
-      outputs = model(
-          input_ids=data['input_ids'].to(device),
-          attention_mask=data['attention_mask'].to(device),
-          token_type_ids=data['token_type_ids'].to(device)
-          )
-    logits = outputs[0]
-    prob = F.softmax(logits, dim=-1).detach().cpu().numpy()
-    logits = logits.detach().cpu().numpy()
-    result = np.argmax(logits, axis=-1)
 
-    output_pred.append(result)
-    output_prob.append(prob)
+    dataloader = DataLoader(tokenized_sent, batch_size=64, shuffle=False)
+    model.eval()
+    output_pred = []
+    output_prob = []
+    for i, data in enumerate(tqdm(dataloader)):
+        with torch.no_grad():
+            outputs = model(
+                input_ids = data['input_ids'].to(device),
+                attention_mask = data['attention_mask'].to(device),
+                token_type_ids=data['token_type_ids'].to(device),
+                sub_mask = data['sub_mask'].to(device),
+                obj_mask = data['obj_mask'].to(device),
+                labels = data['labels'].to(device)
+            )
+        logits = outputs[1]
+        for logit in logits:
+            prob = F.softmax(logit).detach().cpu().numpy().tolist()
+            logit = logit.detach().cpu().numpy()
+            result = np.argmax(logit)
+            
+            output_prob.append(prob)
+            output_pred.append(result)
+
+    return output_pred, output_prob
+  #dataloader = DataLoader(tokenized_sent, batch_size=16, shuffle=False)
+  #model.eval()
+  #output_pred = []
+  #output_prob = []
+  #for i, data in enumerate(tqdm(dataloader)):
+  #  with torch.no_grad():
+  #    outputs = model(
+  #        input_ids=data['input_ids'].to(device),
+  #        attention_mask=data['attention_mask'].to(device),
+  #        token_type_ids=data['token_type_ids'].to(device),
+  #      sub_mask = data['sub_mask'].to(device),
+  #      obj_mask = data['obj_mask'].to(device),
+  ##          labels = data['labels'].to(device)
+  #        )
+  #  logits = outputs[1]
+  #  prob = F.softmax(logits, dim=-1).detach().cpu().numpy()
+  #  logits = logits.detach().cpu().numpy()
+  #  result = np.argmax(logits, axis=-1)
+  #
+  #  output_pred.append(result)
+  #  output_prob.append(prob)
   
-  return np.concatenate(output_pred).tolist(), np.concatenate(output_prob, axis=0).tolist()
+  #return np.concatenate(output_pred).tolist(), np.concatenate(output_prob, axis=0).tolist()
 
 def num_to_label(label):
   """

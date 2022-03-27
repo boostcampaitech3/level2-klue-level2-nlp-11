@@ -5,12 +5,13 @@ import torch
 import sklearn
 import numpy as np
 from sklearn.metrics import accuracy_score, recall_score, precision_score, f1_score
-from transformers import AutoTokenizer, AutoConfig, AutoModelForSequenceClassification, Trainer, TrainingArguments, RobertaConfig, RobertaTokenizer, RobertaForSequenceClassification, BertTokenizer
+from transformers import AutoTokenizer, AutoConfig, AutoModelForTokenClassification, Trainer, TrainingArguments, RobertaConfig, RobertaTokenizer, RobertaForSequenceClassification, BertTokenizer
 from load_data import *
-import wandb
+from entity_model import *
+#import wandb
 
 
-wandb.init(project='klue',entity='klue')
+#wandb.init(project='klue',entity='klue')
 
 def klue_re_micro_f1(preds, labels):
     """KLUE-RE micro f1 (except no_relation)"""
@@ -50,7 +51,8 @@ def compute_metrics(pred):
 
     # calculate accuracy using sklearn's function
     f1 = klue_re_micro_f1(preds, labels)
-    auprc = klue_re_auprc(probs, labels)
+    #auprc = klue_re_auprc(probs, labels)
+    auprc = 0.
     acc = accuracy_score(labels, preds) # 리더보드 평가에는 포함되지 않습니다.
 
     return {
@@ -100,7 +102,7 @@ def train():
     model_config =  AutoConfig.from_pretrained(MODEL_NAME)
     model_config.num_labels = 30
 
-    model =  AutoModelForSequenceClassification.from_pretrained(MODEL_NAME, config=model_config)
+    model =  Entity_Embedding_Model(model_config,0.1)
     print(model.config)
     model.parameters
     model.to(device)
@@ -111,7 +113,7 @@ def train():
       output_dir='./results',          # output directory
       save_total_limit=5,              # number of total save model.
       save_steps=500,                 # model saving step.
-      num_train_epochs=20,              # total number of training epochs
+      num_train_epochs=4,              # total number of training epochs
       learning_rate=5e-5,               # learning_rate
       per_device_train_batch_size=64,  # batch size per device during training
       per_device_eval_batch_size=64,   # batch size for evaluation
@@ -126,7 +128,7 @@ def train():
                                   # `epoch`: Evaluate every end of epoch.
       eval_steps = 100,            # evaluation step.
       load_best_model_at_end = True, 
-      report_to='wandb'
+      #report_to='wandb'
     )
     trainer = Trainer(
       model=model,                         # the instantiated 🤗 Transformers model to be trained
