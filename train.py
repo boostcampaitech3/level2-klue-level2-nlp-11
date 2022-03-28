@@ -4,13 +4,20 @@ import pandas as pd
 import torch
 import sklearn
 import numpy as np
+import random
 from sklearn.metrics import accuracy_score, recall_score, precision_score, f1_score
 from transformers import AutoTokenizer, AutoConfig, AutoModelForSequenceClassification, Trainer, TrainingArguments, RobertaConfig, RobertaTokenizer, RobertaForSequenceClassification, BertTokenizer
 from load_data import *
 import wandb
 
-
-wandb.init(project='klue',entity='klue')
+def set_seed(random_seed=42):
+    torch.manual_seed(random_seed)
+    torch.cuda.manual_seed(random_seed)
+    torch.cuda.manual_seed_all(random_seed) # if use multi-GPU
+    torch.backends.cudnn.deterministic = True
+    torch.backends.cudnn.benchmark = False
+    np.random.seed(random_seed)
+    random.seed(random_seed)
 
 def klue_re_micro_f1(preds, labels):
     """KLUE-RE micro f1 (except no_relation)"""
@@ -69,9 +76,9 @@ def label_to_num(label):
     return num_label
 
 def train():
+    wandb.init(project='klue',entity='klue')
+    set_seed()
     # load model and tokenizer
-    # MODEL_NAME = "bert-base-uncased"
-    #MODEL_NAME = "klue/roberta-base"
     MODEL_NAME = 'monologg/kobigbird-bert-base'
     tokenizer = AutoTokenizer.from_pretrained(MODEL_NAME)
 
