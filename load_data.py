@@ -35,15 +35,15 @@ def preprocessing_dataset(dataset):
     subject_entity = dataset['sub_word'].values
     object_entity = dataset['obj_word'].values
     
-    pattern_list = [re.compile(r'(\([가-힣\w\s]+\))\1'), re.compile(r'[一-龥]'), re.compile(r'\([\d]{1,2}\)')]
-    replace_list = [oneParenthesis, hanjaToHangeul, '']
-    target_col_list = [[sentence], [sentence, subject_entity, object_entity], [sentence]]
-    
-    for pat, repl, target_col in zip(pattern_list, replace_list, target_col_list):
-        for tgt in target_col:
-            for i in range(len(dataset)):
-                if pat.search(tgt[i]):
-                    tgt[i] = pat.sub(repl, tgt[i])
+   # pattern_list = [re.compile(r'(\([가-힣\w\s]+\))\1'), re.compile(r'[一-龥]'), re.compile(r'\([\d]{1,2}\)')]
+    #replace_list = [oneParenthesis, hanjaToHangeul, '']
+    #target_col_list = [[sentence], [sentence, subject_entity, object_entity], [sentence]]
+   # 
+   # for pat, repl, target_col in zip(pattern_list, replace_list, target_col_list):
+   #     for tgt in target_col:
+   #         for i in range(len(dataset)):
+   #             if pat.search(tgt[i]):
+   #                 tgt[i] = pat.sub(repl, tgt[i])
     
     dataset['sentence'] = sentence
     dataset['sub_word'] = subject_entity

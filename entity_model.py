@@ -1,6 +1,9 @@
 import torch
 import torch.nn as nn
 from transformers import AutoModel, AutoConfig, BigBirdModel
+from BigBird import *
+
+
 
 class FCLayer(nn.Module):
     def __init__(self, input_dim, output_dim, dropout_rate=0.0, use_activation=True):
@@ -19,11 +22,12 @@ class FCLayer(nn.Module):
 
 class Entity_Embedding_Model(BigBirdModel):
     def __init__(self, config, dropout_rate):
-        super(Entity_Embedding_Model, self).__init__(config)
-        self.model = AutoModel.from_pretrained('monologg/kobigbird-bert-base')
+        super(Entity_Embedding_Model, self).__init__(config)    
         self.model_config = config
+        
         self.model_config.num_labels = 30
         self.num_labels = 30
+        self.embeddings = BigBirdEmbeddings_with_Entity(self.model_config)
 
         self.cls_fc_layer = FCLayer(self.config.hidden_size, self.config.hidden_size, dropout_rate)
         self.entity_fc_layer1 = FCLayer(self.config.hidden_size, self.config.hidden_size, dropout_rate)
@@ -46,10 +50,13 @@ class Entity_Embedding_Model(BigBirdModel):
         return avg_vector
 
     def forward(self, input_ids, token_type_ids, attention_mask, sub_mask, obj_mask, labels):
-        outputs = self.model(
-            input_ids = input_ids, token_type_ids=token_type_ids, attention_mask=attention_mask
-        )
+        outputs = self(
+            input_ids = input_ids,attention_mask=attention_mask,sub_embeds=sub_mask, obj_embeds=obj_mask)
+    
         sequence_output = outputs[0]
+        pooled_output = outputs[1]
+        print('s_output', sequence_output)
+        print('p_output', pooled_output)
 
         e1_h = self.entity_average(sequence_output, sub_mask)
         e2_h = self.entity_average(sequence_output, obj_mask)
