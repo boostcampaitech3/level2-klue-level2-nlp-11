@@ -70,9 +70,7 @@ def label_to_num(label):
 
 def train():
     # load model and tokenizer
-    # MODEL_NAME = "bert-base-uncased"
-    #MODEL_NAME = "klue/roberta-base"
-    MODEL_NAME = 'monologg/kobigbird-bert-base'
+    MODEL_NAME = "klue/roberta-base"
     tokenizer = AutoTokenizer.from_pretrained(MODEL_NAME)
 
     # load dataset
@@ -85,7 +83,6 @@ def train():
     dev_label = label_to_num(dev_dataset['label'].values)
 
     # tokenizing dataset
-    #tokenized_train = tokenized_dataset(dataset, tokenizer)
     tokenized_train = tokenized_dataset(train_dataset, tokenizer)
     tokenized_dev = tokenized_dataset(dev_dataset, tokenizer)
 
@@ -119,7 +116,7 @@ def train():
       weight_decay=0.01,               # strength of weight decay
       logging_dir='./logs',            # directory for storing logs
       logging_steps=100,              # log saving step.
-      evaluation_strategy='epoch'
+      evaluation_strategy='epoch',
       save_strategy='epoch', # evaluation strategy to adopt during training
                                   # `no`: No evaluation during training.
                                   # `steps`: Evaluate every `eval_steps`.

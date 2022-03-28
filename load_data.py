@@ -28,26 +28,24 @@ def preprocessing_dataset(dataset):
     obj_df = dataset['object_entity'].apply(pd.Series).add_prefix('obj_')
     dataset = pd.concat([dataset, sub_df], axis=1)
     dataset = pd.concat([dataset, obj_df], axis=1)
-    #dataset = dataset.drop(['subject_entity', 'object_entity'], axis=1)
     
+    # sentence = dataset['sentence'].values
+    # subject_entity = dataset['sub_word'].values
+    # object_entity = dataset['obj_word'].values
     
-    sentence = dataset['sentence'].values
-    subject_entity = dataset['sub_word'].values
-    object_entity = dataset['obj_word'].values
+    # pattern_list = [re.compile(r'(\([가-힣\w\s]+\))\1'), re.compile(r'[一-龥]'), re.compile(r'\([\d]{1,2}\)')]
+    # replace_list = [oneParenthesis, hanjaToHangeul, '']
+    # target_col_list = [[sentence], [sentence, subject_entity, object_entity], [sentence]]
     
-    pattern_list = [re.compile(r'(\([가-힣\w\s]+\))\1'), re.compile(r'[一-龥]'), re.compile(r'\([\d]{1,2}\)')]
-    replace_list = [oneParenthesis, hanjaToHangeul, '']
-    target_col_list = [[sentence], [sentence, subject_entity, object_entity], [sentence]]
+    # for pat, repl, target_col in zip(pattern_list, replace_list, target_col_list):
+    #     for tgt in target_col:
+    #         for i in range(len(dataset)):
+    #             if pat.search(tgt[i]):
+    #                 tgt[i] = pat.sub(repl, tgt[i])
     
-    for pat, repl, target_col in zip(pattern_list, replace_list, target_col_list):
-        for tgt in target_col:
-            for i in range(len(dataset)):
-                if pat.search(tgt[i]):
-                    tgt[i] = pat.sub(repl, tgt[i])
-    
-    dataset['sentence'] = sentence
-    dataset['sub_word'] = subject_entity
-    dataset['obj_word'] = object_entity
+    # dataset['sentence'] = sentence
+    # dataset['sub_word'] = subject_entity
+    # dataset['obj_word'] = object_entity
     
     return dataset
 
@@ -71,14 +69,18 @@ def split_data(dataset):
 def tokenized_dataset(dataset, tokenizer):
     """ tokenizer에 따라 sentence를 tokenizing 합니다."""
     concat_entity = []
-    for e01, e02 in zip(dataset['subject_entity'], dataset['object_entity']):
-        temp = ''
-        temp = e01 + '[SEP]' + e02
-        concat_entity.append(temp)
+    for row in dataset.itertuples():
+        temp = [i for i in row.sentence]
+        if row.sub_start_idx > row.obj_start_idx:
+            temp[row.sub_start_idx:row.sub_end_idx+1] = [f'#^{row.sub_type}^{row.sub_word}#']
+            temp[row.obj_start_idx:row.obj_end_idx+1] = [f'@+{row.obj_type}+{row.obj_word}@']
+        else:
+            temp[row.obj_start_idx:row.obj_end_idx+1] = [f'@+{row.obj_type}+{row.obj_word}@']
+            temp[row.sub_start_idx:row.sub_end_idx+1] = [f'#^{row.sub_type}^{row.sub_word}#']
+        concat_entity.append(''.join(temp))
         
     tokenized_sentences = tokenizer(
         concat_entity,
-        list(dataset['sentence']),
         return_tensors="pt",
         padding=True,
         truncation=True,

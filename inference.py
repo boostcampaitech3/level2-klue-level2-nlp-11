@@ -72,7 +72,7 @@ def main(args):
   MODEL_NAME = args.model_dir # model dir.
   model = AutoModelForSequenceClassification.from_pretrained(args.model_dir)
   model.parameters
-  model.to(device)
+  model.to(device) 
 
   ## load test datset
   test_dataset_dir = "../dataset/test/test_data.csv"
