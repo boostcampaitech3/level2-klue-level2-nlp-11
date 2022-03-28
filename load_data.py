@@ -56,7 +56,7 @@ def load_data(dataset_dir):
     pd_dataset = pd.read_csv(dataset_dir, 
                 converters={'subject_entity':literal_eval, 'object_entity':literal_eval})
     dataset = preprocessing_dataset(pd_dataset)
-    dataset.to_csv("/opt/ml/tt/아무거나.csv")
+    dataset.to_csv("../dataset/train/train.csv")
     return dataset
 
 def split_data(dataset):
