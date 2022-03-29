@@ -28,26 +28,24 @@ def preprocessing_dataset(dataset):
     obj_df = dataset['object_entity'].apply(pd.Series).add_prefix('obj_')
     dataset = pd.concat([dataset, sub_df], axis=1)
     dataset = pd.concat([dataset, obj_df], axis=1)
-    #dataset = dataset.drop(['subject_entity', 'object_entity'], axis=1)
     
+    # sentence = dataset['sentence'].values
+    # subject_entity = dataset['sub_word'].values
+    # object_entity = dataset['obj_word'].values
     
-    sentence = dataset['sentence'].values
-    subject_entity = dataset['sub_word'].values
-    object_entity = dataset['obj_word'].values
+    # pattern_list = [re.compile(r'(\([가-힣\w\s]+\))\1|\"\"'), re.compile(r'[一-龥]'), re.compile(r'\([\d]{1,2}\)|\(\)')]
+    # replace_list = [halfLenStr, hanjaToHangeul, '']
+    # target_col_list = [[sentence], [sentence, subject_entity, object_entity], [sentence]]
     
-    pattern_list = [re.compile(r'(\([가-힣\w\s]+\))\1|\"\"'), re.compile(r'[一-龥]'), re.compile(r'\([\d]{1,2}\)|\(\)')]
-    replace_list = [halfLenStr, hanjaToHangeul, '']
-    target_col_list = [[sentence], [sentence, subject_entity, object_entity], [sentence]]
+    # for pat, repl, target_col in zip(pattern_list, replace_list, target_col_list):
+    #     for tgt in target_col:
+    #         for i in range(len(dataset)):
+    #             if pat.search(tgt[i]):
+    #                 tgt[i] = pat.sub(repl, tgt[i])
     
-    for pat, repl, target_col in zip(pattern_list, replace_list, target_col_list):
-        for tgt in target_col:
-            for i in range(len(dataset)):
-                if pat.search(tgt[i]):
-                    tgt[i] = pat.sub(repl, tgt[i])
-    
-    dataset['sentence'] = sentence
-    dataset['sub_word'] = subject_entity
-    dataset['obj_word'] = object_entity
+    # dataset['sentence'] = sentence
+    # dataset['sub_word'] = subject_entity
+    # dataset['obj_word'] = object_entity
     
     return dataset
 
@@ -56,7 +54,6 @@ def load_data(dataset_dir):
     pd_dataset = pd.read_csv(dataset_dir, 
                 converters={'subject_entity':literal_eval, 'object_entity':literal_eval})
     dataset = preprocessing_dataset(pd_dataset)
-    # dataset.to_csv("../dataset/train/train.csv")
     return dataset
 
 def split_data(dataset):
@@ -67,7 +64,6 @@ def split_data(dataset):
     
     return train_dataset,dev_dataset
 
-
 def tokenized_dataset(dataset, tokenizer):
     """ tokenizer에 따라 sentence를 tokenizing 합니다."""
     concat_entity = []
@@ -75,7 +71,7 @@ def tokenized_dataset(dataset, tokenizer):
         temp = ''
         temp = e01 + '[SEP]' + e02
         concat_entity.append(temp)
-        
+
     tokenized_sentences = tokenizer(
         concat_entity,
         list(dataset['sentence']),

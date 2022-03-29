@@ -1,0 +1,23 @@
+model:
+  name: monologg/kobigbird-bert-base #train에 사용할 Model, Tokenizer
+
+TA: #Training Arguments
+  output_dir : ./results
+  log_dir : ./logs
+  epoch : 5
+  LR : 5e-5
+  batch_size : 64
+
+dir:
+  train : ../dataset/train/train.csv
+  test : ../dataset/test/test_data.csv
+  best_dir : ./best_model
+  output : ./prediction/submission.csv
+
+inference:
+  model_dir : ./best_model
+
+debugging : True
+  
+
+
