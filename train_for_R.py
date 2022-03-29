@@ -6,7 +6,7 @@ from torch.utils.data import RandomSampler, DataLoader
 import sklearn
 import numpy as np
 from sklearn.metrics import accuracy_score, recall_score, precision_score, f1_score
-from transformers import AutoTokenizer, AutoConfig, AutoModelForSequenceClassification, Trainer, TrainingArguments, RobertaConfig, RobertaTokenizer, RobertaForSequenceClassification, BertTokenizer
+from transformers import AutoTokenizer, AutoConfig, AutoModelForSequenceClassification, Trainer, TrainingArguments, RobertaConfig, RobertaTokenizer, RobertaForSequenceClassification, BertTokenizer, set_seed
 from load_data_for_R import *
 from model_for_R import R_BigBird
 import wandb
@@ -70,6 +70,7 @@ def label_to_num(label):
     return num_label
 
 def train():
+    set_seed(42)
     # load model and tokenizer
     tokenizer = AutoTokenizer.from_pretrained('./vocab_robertaLarge')
 

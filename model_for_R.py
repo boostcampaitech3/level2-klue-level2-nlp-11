@@ -74,3 +74,4 @@ class R_BigBird(RobertaPreTrainedModel):
 # config = AutoConfig.from_pretrained('monologg/kobigbird-bert-base')
 # model = R_BigBird(config, 0.1)
 # print(model)
+# print(config)
