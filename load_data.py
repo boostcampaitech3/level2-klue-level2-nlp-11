@@ -24,6 +24,8 @@ class RE_Dataset(torch.utils.data.Dataset):
 def preprocessing_dataset(dataset):
     """ 처음 불러온 csv 파일을 원하는 형태의 DataFrame으로 변경 시켜줍니다."""
     #기존 데이터셋 entity열에 저장된 word, start_idx, end_idx, sub_type 값들을 각 열에 풀어서 연장
+    dataset['subject_entity'] = dataset['subject_entity'].map(literal_eval)
+    dataset['object_entity'] = dataset['object_entity'].map(literal_eval)
     sub_df = dataset['subject_entity'].apply(pd.Series).add_prefix('sub_')
     obj_df = dataset['object_entity'].apply(pd.Series).add_prefix('obj_')
     dataset = pd.concat([dataset, sub_df], axis=1)
@@ -51,8 +53,8 @@ def preprocessing_dataset(dataset):
 
 def load_data(dataset_dir):
     """ csv 파일을 경로에 맡게 불러 옵니다. """
-    pd_dataset = pd.read_csv(dataset_dir, 
-                converters={'subject_entity':literal_eval, 'object_entity':literal_eval})
+    pd_dataset = pd.read_csv(dataset_dir)
+    pd_dataset = clean_dataset(pd_dataset)
     dataset = preprocessing_dataset(pd_dataset)
     return dataset
 
@@ -89,3 +91,23 @@ def halfLenStr(matchobj):
 
 def hanjaToHangeul(matchobj):
     return hanja.translate(matchobj[0], 'substitution')
+
+def clean_dataset(dataset):
+    # mislabeling 수정
+    dataset.loc[dataset['id'] == 32107, 'subject_entity'] = "{'word': '이용빈', 'start_idx': 0, 'end_idx': 2, 'type': 'PER'}"
+    dataset.loc[dataset['id'] == 1435, 'object_entity'] = "{'word': '조오섭', 'start_idx': 0, 'end_idx': 2, 'type': 'PER'}"
+    dataset.loc[dataset['id'] == 9269, 'object_entity'] = "{'word': '김성진', 'start_idx': 21, 'end_idx': 23, 'type': 'PER'}"
+    dataset.loc[dataset['id'] == 30870, 'object_entity'] = "{'word': '김성진', 'start_idx': 21, 'end_idx': 23, 'type': 'PER'}"
+    dataset.loc[dataset['id'] == 1334, 'subject_entity'] = "{'word': '김성진', 'start_idx': 21, 'end_idx': 23, 'type': 'PER'}"
+    dataset.loc[dataset['id'] == 30530, 'subject_entity'] = "{'word': '김성진', 'start_idx': 21, 'end_idx': 23, 'type': 'PER'}"
+    dataset.loc[dataset['id'] == 8477, 'object_entity'] = "{'word': '김성진', 'start_idx': 21, 'end_idx': 23, 'type': 'PER'}"
+
+    # index오류 수정
+    dataset.loc[dataset['id'] == 13780, 'object_entity'] = "{'word': '시동', 'start_idx': 4, 'end_idx': 5, 'type': 'POH'}"
+    dataset.loc[dataset['id'] == 15584, 'object_entity'] = "{'word': '시동', 'start_idx': 4, 'end_idx': 5, 'type': 'POH'}"
+
+    drop_ids = [18458, 6749, 8364, 11511, 25094, 277]
+    dataset = dataset[dataset['id'].map(lambda x: x not in drop_ids)] # mislabeling drop
+    dataset = dataset.reset_index(drop=True)
+
+    return dataset
