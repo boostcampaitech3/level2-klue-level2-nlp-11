@@ -54,7 +54,7 @@ def load_data(dataset_dir):
     pd_dataset = pd.read_csv(dataset_dir, 
                 converters={'subject_entity':literal_eval, 'object_entity':literal_eval})
     dataset = preprocessing_dataset(pd_dataset)
-    
+    dataset.to_csv("../dataset/train/train.csv")
     return dataset
 
 def split_data(dataset):
@@ -89,7 +89,7 @@ def tokenized_dataset(dataset, tokenizer):
         )
     return tokenized_sentences
   
-def oneParenthesis(matchobj):
+def halfLenStr(matchobj):
     string = matchobj[0]
     return string[:len(string)//2]
 
