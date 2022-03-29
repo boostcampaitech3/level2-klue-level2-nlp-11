@@ -9,6 +9,7 @@ from sklearn.metrics import accuracy_score, recall_score, precision_score, f1_sc
 from transformers import AutoTokenizer, AutoConfig, AutoModelForSequenceClassification, Trainer, TrainingArguments, RobertaConfig, RobertaTokenizer, RobertaForSequenceClassification, BertTokenizer, set_seed
 from load_data import *
 import wandb
+import yaml
 
 def klue_re_micro_f1(preds, labels):
     """KLUE-RE micro f1 (except no_relation)"""
@@ -67,23 +68,25 @@ def label_to_num(label):
     return num_label
 
 def train():
-    wandb.init(project='klue',entity='klue')
-    set_seed(42)
+    config = yaml.load(open("./config.yaml", "r"), Loader=yaml.FullLoader) # load config
+    wandb.init(project='klue',entity='klue') # wandb init
+    set_seed(42) # set random seed
+    
     # load model and tokenizer
-    MODEL_NAME = 'monologg/kobigbird-bert-base'
+    MODEL_NAME = config["model"]["name"]
     tokenizer = AutoTokenizer.from_pretrained(MODEL_NAME)
 
     # load dataset
-    dataset = load_data("../dataset/train/train.csv")
+    dataset = load_data(config["dir"]["train"])
+    if config["debugging"] == True:
+        dataset = dataset.loc[:1000]
 
     train_dataset, dev_dataset= split_data(dataset)
 
-    #train_label = label_to_num(dataset['label'].values)
     train_label = label_to_num(train_dataset['label'].values)
     dev_label = label_to_num(dev_dataset['label'].values)
 
     # tokenizing dataset
-    #tokenized_train = tokenized_dataset(dataset, tokenizer)
     tokenized_train = tokenized_dataset(train_dataset, tokenizer)
     tokenized_dev = tokenized_dataset(dev_dataset, tokenizer)
 
@@ -92,30 +95,28 @@ def train():
     RE_dev_dataset = RE_Dataset(tokenized_dev, dev_label)
 
     device = torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
-
     print(device)
+    
     # setting model hyperparameter
     model_config =  AutoConfig.from_pretrained(MODEL_NAME)
     model_config.num_labels = 30
 
     model =  AutoModelForSequenceClassification.from_pretrained(MODEL_NAME, config=model_config)
     print(model.config)
-    model.parameters
-    model.to(device)
-  
-  # 사용한 option 외에도 다양한 option들이 있습니다.
-  # https://huggingface.co/transformers/main_classes/trainer.html#trainingarguments 참고해주세요.
+    model = model.to(device)
+
+    Args = config['TA']
     training_args = TrainingArguments(
-      output_dir='./results',          # output directory
+      output_dir=Args["output_dir"],          # output directory
       save_total_limit=5,              # number of total save model.
       save_steps=500,                 # model saving step.
-      num_train_epochs=4,              # total number of training epochs
-      learning_rate=5e-5,               # learning_rate
-      per_device_train_batch_size=64,  # batch size per device during training
-      per_device_eval_batch_size=64,   # batch size for evaluation
+      num_train_epochs=int(Args["epoch"]),              # total number of training epochs
+      learning_rate=float(Args["LR"]),               # learning_rate
+      per_device_train_batch_size=int(Args["batch_size"]),  # batch size per device during training
+      per_device_eval_batch_size=int(Args["batch_size"]),   # batch size for evaluation
       warmup_steps=500,                # number of warmup steps for learning rate scheduler
       weight_decay=0.01,               # strength of weight decay
-      logging_dir='./logs',            # directory for storing logs
+      logging_dir=Args["log_dir"],            # directory for storing logs
       logging_steps=100,              # log saving step.
       evaluation_strategy='epoch',
       save_strategy='epoch', # evaluation strategy to adopt during training
@@ -126,6 +127,7 @@ def train():
       load_best_model_at_end = True, 
       report_to='wandb'
     )
+    
     trainer = Trainer(
       model=model,                         # the instantiated 🤗 Transformers model to be trained
       args=training_args,                  # training arguments, defined above
@@ -136,7 +138,8 @@ def train():
 
     # train model
     trainer.train()
-    model.save_pretrained('./best_model')
+    model.save_pretrained(config["dir"]["best_dir"])
+
 def main():
     train()
 

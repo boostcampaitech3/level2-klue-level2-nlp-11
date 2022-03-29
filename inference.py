@@ -4,10 +4,10 @@ from load_data import *
 import pandas as pd
 import torch
 import torch.nn.functional as F
-
+import yaml
+import json
 import pickle as pickle
 import numpy as np
-import argparse
 from tqdm import tqdm
 
 def inference(model, tokenized_sent, device):
@@ -59,23 +59,25 @@ def load_test_dataset(dataset_dir, tokenizer):
   tokenized_test = tokenized_dataset(test_dataset, tokenizer)
   return test_dataset['id'], tokenized_test, test_label
 
-def main(args):
+def main():
   """
     주어진 dataset csv 파일과 같은 형태일 경우 inference 가능한 코드입니다.
   """
-  device = torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
+  config = yaml.load(open("./config.yaml", "r"), Loader=yaml.FullLoader) # load config
+  device = torch.device('cuda:0' if torch.cuda.is_available() else 'cpu') # load device
+  
   # load tokenizer
-  Tokenizer_NAME = 'monologg/kobigbird-bert-base'
+  Tokenizer_NAME = json.load(open(config["inference"]["model_dir"]+'/config.json','r'))['_name_or_path']
   tokenizer = AutoTokenizer.from_pretrained(Tokenizer_NAME)
 
   ## load my model
-  MODEL_NAME = args.model_dir # model dir.
-  model = AutoModelForSequenceClassification.from_pretrained(args.model_dir)
+  MODEL_NAME = config["inference"]["model_dir"] # model dir.
+  model = AutoModelForSequenceClassification.from_pretrained(MODEL_NAME)
   model.parameters
   model.to(device)
 
   ## load test datset
-  test_dataset_dir = "../dataset/test/test_data.csv"
+  test_dataset_dir = config["dir"]["test"]
   test_id, test_dataset, test_label = load_test_dataset(test_dataset_dir, tokenizer)
   Re_test_dataset = RE_Dataset(test_dataset ,test_label)
 
@@ -84,19 +86,11 @@ def main(args):
   pred_answer = num_to_label(pred_answer) # 숫자로 된 class를 원래 문자열 라벨로 변환.
   
   ## make csv file with predicted answer
-  #########################################################
-  # 아래 directory와 columns의 형태는 지켜주시기 바랍니다.
   output = pd.DataFrame({'id':test_id,'pred_label':pred_answer,'probs':output_prob,})
 
-  output.to_csv('./prediction/submission.csv', index=False) # 최종적으로 완성된 예측한 라벨 csv 파일 형태로 저장.
-  #### 필수!! ##############################################
+  output.to_csv(config["dir"]["output"], index=False) # 최종적으로 완성된 예측한 라벨 csv 파일 형태로 저장.
   print('---- Finish! ----')
+
 if __name__ == '__main__':
-  parser = argparse.ArgumentParser()
-  
-  # model dir
-  parser.add_argument('--model_dir', type=str, default="./best_model")
-  args = parser.parse_args()
-  print(args)
-  main(args)
+  main()
   
