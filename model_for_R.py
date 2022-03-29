@@ -1,6 +1,7 @@
 import torch
 import torch.nn as nn
-from transformers import AutoModel, AutoConfig, BigBirdModel, RobertaPreTrainedModel
+from transformers import AutoModel, AutoConfig, BigBirdModel, RobertaPreTrainedModel, BigBirdPreTrainedModel
+import transformers
 
 
 class FCLayer(nn.Module):
@@ -69,3 +70,7 @@ class R_BigBird(RobertaPreTrainedModel):
         outputs = (loss,) + outputs
 
         return outputs
+
+# config = AutoConfig.from_pretrained('monologg/kobigbird-bert-base')
+# model = R_BigBird(config, 0.1)
+# print(model)

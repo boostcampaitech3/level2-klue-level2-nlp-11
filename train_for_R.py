@@ -92,8 +92,8 @@ def train():
     dev_label = label_to_num(dev_label)
 
     # make dataset for pytorch.
-    RE_train_dataset = RE_Dataset_for_R(tokenized_train, train_label)
-    RE_dev_dataset = RE_Dataset_for_R(tokenized_dev, dev_label)
+    RE_train_dataset = RE_Dataset_for_R(tokenized_train, train_label, train=True)
+    RE_dev_dataset = RE_Dataset_for_R(tokenized_dev, dev_label, train=True)
 
     device = torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
 
@@ -120,7 +120,7 @@ def train():
       warmup_steps=500,                # number of warmup steps for learning rate scheduler
       weight_decay=0.01,               # strength of weight decay
       logging_dir='./logs',            # directory for storing logs
-      logging_steps=100,              # log saving step.
+      logging_steps=500,              # log saving step.
       evaluation_strategy='steps', # evaluation strategy to adopt during training
                                   # `no`: No evaluation during training.
                                   # `steps`: Evaluate every `eval_steps`.

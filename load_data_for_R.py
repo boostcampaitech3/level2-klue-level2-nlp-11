@@ -39,23 +39,44 @@ def preprocessing_dataset_for_R(dataset):
     dataset = pd.concat([dataset, obj_df], axis=1)
 
 
-    sentence = dataset['sentence'].values
-    subject_entity = dataset['sub_word'].values
-    object_entity = dataset['obj_word'].values
-    
-    pattern_list = [re.compile(r'(\([가-힣\w\s]+\))\1|\"\"'), re.compile(r'[一-龥]'), re.compile(r'\([\d]{1,2}\)|\(\)')]
-    replace_list = [halfLenStr, hanjaToHangeul, '']
-    target_col_list = [[sentence], [sentence, subject_entity, object_entity], [sentence]]
-    
-    for pat, repl, target_col in zip(pattern_list, replace_list, target_col_list):
-        for tgt in target_col:
-            for i in range(len(dataset)):
-                if pat.search(tgt[i]):
-                    tgt[i] = pat.sub(repl, tgt[i])
-    
-    dataset['sentence'] = sentence
-    dataset['sub_word'] = subject_entity
-    dataset['obj_word'] = object_entity
+    # sentence = dataset['sentence'].values
+    # subject_entity = dataset['sub_word'].values
+    # object_entity = dataset['obj_word'].values
+
+    # need_change = ["subject_entity", "object_entity", "sub_start_idx", "sub_end_idx", "obj_start_idx", "obj_end_idx"]
+
+
+    # pattern_list = [re.compile(r'(\([가-힣\w\s]+\))\1|\"\"'), re.compile(r'[一-龥]'), re.compile(r'\([\d]{1,2}\)|\(\)')]
+    # replace_list = [halfLenStr, hanjaToHangeul, '']
+    # target_col_list = [[sentence], [sentence, subject_entity, object_entity], [sentence]]
+    # tmp = []
+    # for pat, repl, target_col in zip(pattern_list, replace_list, target_col_list):
+    #     for tgt in target_col:
+    #         for i in range(len(dataset)):
+    #             if pat.search(tgt[i]):
+    #                 tmp.append(i)
+    #                 tgt[i] = pat.sub(repl, tgt[i])
+                        
+            
+    # dataset['sentence'] = sentence
+    # dataset['sub_word'] = subject_entity
+    # dataset['obj_word'] = object_entity
+    # tmp = list(set(tmp))
+    # for i in tmp: 
+    #     sen = str(dataset.loc[[i],['sentence']].values[0][0])
+    #     sub = str(dataset.loc[[i], ['sub_word']].values[0][0])
+    #     obj = str(dataset.loc[[i], ['obj_word']].values[0][0])
+    #     subs = sen.find(sub)
+    #     sube = subs + len(sub) - 1
+    #     objs = sen.find(str(obj))
+    #     obje = objs + len(obj) - 1
+    #     subentity = str(dataset.loc[[i],["subject_entity"]].values).replace(str(dataset.loc[[i],["sub_start_idx"]].values[0][0]), str(subs))
+    #     subentity = subentity.replace(str(dataset.loc[[i],["sub_end_idx"]].values[0][0]), str(sube))
+    #     objentity = str(dataset.loc[[i],["object_entity"]].values).replace(str(dataset.loc[[i],["obj_start_idx"]].values[0][0]), str(objs))
+    #     objentity = objentity.replace(str(dataset.loc[[i],["obj_end_idx"]].values[0][0]), str(obje))
+    #     need_change_val = [subentity, objentity, subs, sube, objs, obje]
+    #     for ii in range(len(need_change)):
+    #         dataset.loc[[i],[need_change[ii]]] = need_change_val[ii]
 
 
     sentence = []
@@ -178,7 +199,20 @@ def hanjaToHangeul(matchobj):
 
 # tokenizer = AutoTokenizer.from_pretrained('./vocab_robertaLarge')
 # dataset = load_data_for_R('../dataset/train/train.csv')
-# print(dataset[:5])
-# features, labels = convert_sentence_to_features(dataset[:5], tokenizer, 256)
+# print(dataset[:41])
+# features, labels = convert_sentence_to_features(dataset, tokenizer, 256)
 # print({key: torch.tensor(val[0]) for key, val in features.items()})
+# print(features)
 # print(labels)
+
+# dataset = pd.read_csv('../dataset/train/train.csv')
+
+# count = 0
+# for i in range(len(dataset)):
+#     if count >= 5250:
+#         break
+#     if dataset.loc[i]['label'] == 'no_relation':
+#         dataset = dataset.drop(i)
+#         count += 1
+
+# dataset.to_csv('train_temp.csv', index=False)

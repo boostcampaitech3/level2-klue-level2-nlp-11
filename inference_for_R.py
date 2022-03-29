@@ -63,8 +63,6 @@ tokenized_train, train_label = convert_sentence_to_features(dataset, tokenizer, 
 RE_dataset = RE_Dataset_for_R(tokenized_train, train_label, train=False)
 
 output_pred, output_prob = inference(model, RE_dataset, device)
-print(output_prob)
-print(type(output_prob))
 
 original_label = num_to_label(output_pred)
 
