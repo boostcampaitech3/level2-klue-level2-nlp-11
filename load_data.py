@@ -93,26 +93,20 @@ def tokenized_dataset(dataset, tokenizer):
         max_length=256,
         add_special_tokens=True,
         )
-    
-    sub_mask=[]
-    obj_mask=[]
+    sub_embeds=[]
+    obj_embeds=[]
     for idx, sentence in enumerate(tokenized_sentences['input_ids']):
         sentence=sentence.tolist()
-        sub_emb = [0]*len(sentence)
-        obj_emb =  [0]*len(sentence)
-        sub_start = sentence.index(7)
-        sub_end = sentence.index(8)
-        obh_start = sentence.index(9)
-        obj_end= sentence.index(10)
-        
-        sub_emb[sub_start+1:sub_end]  = [1] *(sub_end-sub_start-1)
-        obj_emb[obj_start+1:obj_end]  = [1] *(obj_end-obj_start-1)
-        
-        sub_mask.append(sub_emb)
-        obj_mask.append(obj_emb)
-        
-    tokenized_sentences['sub_mask'] = torch.tensor(sub_mask)
-    tokenized_sentences['obj_mask'] = torch.tensor(obj_mask)
+        sub=[0]*len(sentence)
+        obj=[0]*len(sentence)
+        sub[sentence.index(7)]=7
+        sub[sentence.index(8)]=8
+        obj[sentence.index(9)]=9
+        obj[sentence.index(10)]=10
+        sub_embeds.append(sub)
+        obj_embeds.append(obj)
+    tokenized_sentences['sub_mask'] = torch.tensor(sub_embeds)
+    tokenized_sentences['obj_mask'] = torch.tensor(obj_embeds)
     
     return tokenized_sentences
 

@@ -4,7 +4,7 @@ from load_data import *
 import pandas as pd
 import torch
 import torch.nn.functional as F
-
+from entity_model import *
 import pickle as pickle
 import numpy as np
 import argparse
@@ -16,13 +16,13 @@ def inference(model, tokenized_sent, device):
     batch_size로 나눠 model이 예측 합니다.
   """
 
-    dataloader = DataLoader(tokenized_sent, batch_size=64, shuffle=False)
-    model.eval()
-    output_pred = []
-    output_prob = []
-    for i, data in enumerate(tqdm(dataloader)):
-        with torch.no_grad():
-            outputs = model(
+  dataloader = DataLoader(tokenized_sent, batch_size=1, shuffle=False)
+  model.eval()
+  output_pred = []
+  output_prob = []
+  for i, data in enumerate(tqdm(dataloader)):
+    with torch.no_grad():
+      outputs = model(
                 input_ids = data['input_ids'].to(device),
                 attention_mask = data['attention_mask'].to(device),
                 token_type_ids=data['token_type_ids'].to(device),
@@ -30,16 +30,19 @@ def inference(model, tokenized_sent, device):
                 obj_mask = data['obj_mask'].to(device),
                 labels = data['labels'].to(device)
             )
-        logits = outputs[1]
-        for logit in logits:
-            prob = F.softmax(logit).detach().cpu().numpy().tolist()
-            logit = logit.detach().cpu().numpy()
-            result = np.argmax(logit)
+      
+      logits = outputs[1]
+      for logit in logits:
+        
+        prob = F.softmax(logit,dim=-1).detach().cpu().numpy().tolist()
+        logit = logit.detach().cpu().numpy()
+        result = np.argmax(logit)
             
-            output_prob.append(prob)
-            output_pred.append(result)
+        output_prob.append(prob)
+        output_pred.append(result)
 
-    return output_pred, output_prob
+  return output_pred, output_prob
+
   #dataloader = DataLoader(tokenized_sent, batch_size=16, shuffle=False)
   #model.eval()
   #output_pred = []
@@ -99,7 +102,9 @@ def main(args):
   ## load my model
   
   MODEL_NAME = args.model_dir # model dir.
-  model = AutoModelForSequenceClassification.from_pretrained(args.model_dir)
+  model_config =  AutoConfig.from_pretrained('monologg/kobigbird-bert-base')
+  model = Entity_Embedding_Model(model_config,0.1)
+  model.load_state_dict(torch.load('./best_model/pytorch_model.bin'))
   model.parameters
   model.to(device)
 
