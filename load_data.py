@@ -143,9 +143,13 @@ def collate_fn(batch_samples):
         pad_len = max_len - data['input_ids'].shape[1]
         for key, val in data.items():
             if key != 'labels':
-                batch[key].append(torch.cat((val, torch.zeros(1,pad_len)), dim=1).type(torch.long))
+                if key == 'input_ids':
+                    batch[key].append(torch.cat((val, torch.ones(1,pad_len)), dim=1).type(torch.long))
+                else:
+                    batch[key].append(torch.cat((val, torch.zeros(1,pad_len)), dim=1).type(torch.long))
             else:
                 batch[key].append(val)
+                
     batch['input_ids'] = torch.stack(batch['input_ids']).squeeze(1)
     batch['token_type_ids'] = torch.stack(batch['token_type_ids']).squeeze(1)
     batch['attention_mask'] = torch.stack(batch['attention_mask']).squeeze(1)
