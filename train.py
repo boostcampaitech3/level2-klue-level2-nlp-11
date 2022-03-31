@@ -10,6 +10,7 @@ from transformers import AutoTokenizer, AutoConfig, AutoModelForSequenceClassifi
 from load_data import *
 import wandb
 import yaml
+import shutil
 
 def klue_re_micro_f1(preds, labels):
     """KLUE-RE micro f1 (except no_relation)"""
@@ -69,8 +70,10 @@ def label_to_num(label):
 
 def train():
     config = yaml.load(open("./config.yaml", "r"), Loader=yaml.FullLoader) # load config
-    wandb.init(project='klue',entity='klue') # wandb init
+    #wandb.init(project='klue',entity='klue') # wandb init
     set_seed(42) # set random seed
+    device = torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
+    print(device)
     
     # load model and tokenizer
     MODEL_NAME = config["model"]["name"]
@@ -87,22 +90,23 @@ def train():
     dev_label = label_to_num(dev_dataset['label'].values)
 
     # tokenizing dataset
-    tokenized_train = tokenized_dataset(train_dataset, tokenizer)
-    tokenized_dev = tokenized_dataset(dev_dataset, tokenizer)
+    tokenized_train = tokenized_dataset(train_dataset, tokenizer, config['input_type'])
+    tokenized_dev = tokenized_dataset(dev_dataset, tokenizer, config['input_type'])
+
+    # make batch_indices
+    train_sampler = make_sampler(tokenized_train, batch_size=config['TA']['batch_size'], max_pad_len=20)
+    valid_sampler = make_sampler(tokenized_dev, batch_size=config['TA']['batch_size'], max_pad_len=100)
 
     # make dataset for pytorch.
     RE_train_dataset = RE_Dataset(tokenized_train, train_label)
     RE_dev_dataset = RE_Dataset(tokenized_dev, dev_label)
-
-    device = torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
-    print(device)
     
     # setting model hyperparameter
     model_config =  AutoConfig.from_pretrained(MODEL_NAME)
     model_config.num_labels = 30
 
     model =  AutoModelForSequenceClassification.from_pretrained(MODEL_NAME, config=model_config)
-    print(model.config)
+    #print(model.config)
     model = model.to(device)
 
     Args = config['TA']
@@ -117,28 +121,30 @@ def train():
       warmup_steps=500,                # number of warmup steps for learning rate scheduler
       weight_decay=0.01,               # strength of weight decay
       logging_dir=Args["log_dir"],            # directory for storing logs
-      logging_steps=100,              # log saving step.
+      logging_steps=500,              # log saving step.
       evaluation_strategy='epoch',
       save_strategy='epoch', # evaluation strategy to adopt during training
                                   # `no`: No evaluation during training.
                                   # `steps`: Evaluate every `eval_steps`.
                                   # `epoch`: Evaluate every end of epoch.
-      eval_steps = 100,            # evaluation step.
       load_best_model_at_end = True, 
       report_to='wandb'
     )
     
-    trainer = Trainer(
-      model=model,                         # the instantiated 🤗 Transformers model to be trained
-      args=training_args,                  # training arguments, defined above
-      train_dataset=RE_train_dataset,         # training dataset
-      eval_dataset=RE_dev_dataset,             # evaluation dataset
-      compute_metrics=compute_metrics         # define metrics function
+    trainer = BucketTrainer(
+        model=model,                         # the instantiated 🤗 Transformers model to be trained
+        args=training_args,                  # training arguments, defined above
+        train_dataset=RE_train_dataset,  # training dataset
+        eval_dataset=RE_dev_dataset,
+        compute_metrics = compute_metrics      
     )
+    trainer.train_sampler = train_sampler
+    trainer.valid_sampler = valid_sampler
 
     # train model
     trainer.train()
     model.save_pretrained(config["dir"]["best_dir"])
+    shutil.copy('config.yaml', config["dir"]["best_dir"])
 
 def main():
     train()

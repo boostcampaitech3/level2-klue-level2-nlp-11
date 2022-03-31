@@ -1,11 +1,18 @@
 import pickle as pickle
 import os
+from collections import defaultdict
 import pandas as pd
 from ast import literal_eval
 import torch
+from torch.utils.data import DataLoader
+from transformers import Trainer
 from sklearn.model_selection import StratifiedShuffleSplit
 import re
+import random
 import hanja
+import warnings
+warnings.filterwarnings('ignore')
+os.environ["TOKENIZERS_PARALLELISM"] = "true"
 
 class RE_Dataset(torch.utils.data.Dataset):
     """ Dataset 구성을 위한 class."""
@@ -14,12 +21,24 @@ class RE_Dataset(torch.utils.data.Dataset):
         self.labels = labels
 
     def __getitem__(self, idx):
-        item = {key: val[idx].clone().detach() for key, val in self.pair_dataset.items()}
+        item = {key:val for key,val in self.pair_dataset[idx].items()}
         item['labels'] = torch.tensor(self.labels[idx])
+        
         return item
 
     def __len__(self):
         return len(self.labels)
+
+class BucketTrainer(Trainer):
+    def get_train_dataloader(self) -> DataLoader:
+
+        return DataLoader(self.train_dataset, batch_sampler=self.train_sampler, collate_fn=collate_fn)
+
+    def get_eval_dataloader(self, eval_dataset) -> DataLoader:
+        if eval_dataset is not None:
+            return DataLoader(eval_dataset, batch_sampler=self.valid_sampler, collate_fn=collate_fn)
+        else:
+            return DataLoader(self.eval_dataset, batch_sampler=self.valid_sampler, collate_fn=collate_fn)
 
 def preprocessing_dataset(dataset):
     """ 처음 불러온 csv 파일을 원하는 형태의 DataFrame으로 변경 시켜줍니다."""
@@ -54,7 +73,8 @@ def preprocessing_dataset(dataset):
 def load_data(dataset_dir):
     """ csv 파일을 경로에 맡게 불러 옵니다. """
     pd_dataset = pd.read_csv(dataset_dir)
-    pd_dataset = clean_dataset(pd_dataset)
+    if 'train' in dataset_dir:
+        pd_dataset = clean_dataset(pd_dataset)
     dataset = preprocessing_dataset(pd_dataset)
     return dataset
 
@@ -66,25 +86,72 @@ def split_data(dataset):
     
     return train_dataset,dev_dataset
 
-def tokenized_dataset(dataset, tokenizer):
+def tokenized_dataset(dataset, tokenizer, input_type):
     """ tokenizer에 따라 sentence를 tokenizing 합니다."""
-    concat_entity = []
-    for e01, e02 in zip(dataset['sub_word'], dataset['obj_word']):
-        temp = ''
-        temp = e01 + '[SEP]' + e02
-        concat_entity.append(temp)
+    tokens = []
+    sentences = list(dataset['sentence'])
 
-    tokenized_sentences = tokenizer(
-        concat_entity,
-        list(dataset['sentence']),
-        return_tensors="pt",
-        padding=True,
-        truncation=True,
-        max_length=256,
-        add_special_tokens=True,
-        )
-    return tokenized_sentences
-  
+    for idx, row in enumerate(dataset.itertuples()):
+        if input_type == 'double': # input이 두개인 경우
+            temp = row.sub_word + '[SEP]' + row.obj_word
+            tokenized_sentences = tokenizer(
+                temp,
+                sentences[idx],
+                return_tensors="pt",
+                padding=False,
+                truncation=True,
+                max_length=256,
+                add_special_tokens=True,
+                )
+                
+        elif input_type == 'single': # input이 한개인 경우
+            temp = [i for i in row.sentence]
+            if row.sub_start_idx > row.obj_start_idx:
+                temp[row.sub_start_idx:row.sub_end_idx+1] = [f'#^{row.sub_type}^{row.sub_word}#']
+                temp[row.obj_start_idx:row.obj_end_idx+1] = [f'@+{row.obj_type}+{row.obj_word}@']
+            else:
+                temp[row.obj_start_idx:row.obj_end_idx+1] = [f'@+{row.obj_type}+{row.obj_word}@']
+                temp[row.sub_start_idx:row.sub_end_idx+1] = [f'#^{row.sub_type}^{row.sub_word}#']
+
+            tokenized_sentences = tokenizer(
+                ''.join(temp),
+                return_tensors="pt",
+                padding=False,
+                truncation=True,
+                max_length=256,
+                add_special_tokens=True
+                ) 
+        tokens.append(tokenized_sentences)
+    return tokens
+
+def make_sampler(data, batch_size=64, max_pad_len=20):
+    sentence_length = [sen['input_ids'].shape[1] for sen in data]
+    bucket_dict = defaultdict(list)
+
+    for index, src_length in enumerate(sentence_length):
+        bucket_dict[(src_length // max_pad_len)].append(index)
+
+    batch_sampler = [bucket[start:start+batch_size] for bucket in bucket_dict.values() for start in range(0, len(bucket), batch_size)]
+    random.shuffle(batch_sampler)
+
+    return batch_sampler
+
+def collate_fn(batch_samples):
+    max_len = max([i['input_ids'].shape[1] for i in batch_samples])
+    batch = defaultdict(list)
+    for data in batch_samples:
+        pad_len = max_len - data['input_ids'].shape[1]
+        for key, val in data.items():
+            if key != 'labels':
+                batch[key].append(torch.cat((val, torch.zeros(1,pad_len)), dim=1).type(torch.long))
+            else:
+                batch[key].append(val)
+    batch['input_ids'] = torch.stack(batch['input_ids']).squeeze(1)
+    batch['token_type_ids'] = torch.stack(batch['token_type_ids']).squeeze(1)
+    batch['attention_mask'] = torch.stack(batch['attention_mask']).squeeze(1)
+    batch['labels'] = torch.stack(batch['labels'])
+    return batch
+
 def halfLenStr(matchobj):
     string = matchobj[0]
     return string[:len(string)//2]

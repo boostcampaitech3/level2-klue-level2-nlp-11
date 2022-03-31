@@ -1,6 +1,8 @@
 model:
   name: monologg/kobigbird-bert-base #train에 사용할 Model, Tokenizer
 
+input_type : double # tokenizer에 태울 sentence의 갯수 (single or double)
+
 TA: #Training Arguments
   output_dir : ./results
   log_dir : ./logs
@@ -17,7 +19,7 @@ dir:
 inference:
   model_dir : ./best_model
 
-debugging : True
+debugging : False
   
 
 
