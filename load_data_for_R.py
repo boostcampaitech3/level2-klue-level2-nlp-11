@@ -89,10 +89,23 @@ def make_sampler(data, batch_size=64, max_pad_len=20):
     for index, src_length in enumerate(sentence_length):
         bucket_dict[(src_length // max_pad_len)].append(index)
 
-    batch_sampler = [bucket[start:start+batch_size] for bucket in bucket_dict.values() for start in range(0, len(bucket), batch_size)]
-    random.shuffle(batch_sampler)
+    batch_dict = defaultdict(list)
 
-    return batch_sampler
+    for key, bucket in bucket_dict.items():
+        for start in range(0, len(bucket), batch_size):
+            batch_dict[key].append(bucket[start:start+batch_size])
+
+    surplus = []
+    sampler = []
+    for batch_set in batch_dict.values():
+        for batch in batch_set:
+            if len(batch) == batch_size:
+                sampler.append(batch)
+            else:
+                surplus.extend(batch)
+    sampler.extend([surplus[start:start+batch_size] for start in range(0, len(surplus), batch_size)])
+    random.shuffle(sampler)
+    return sampler
 
 def collate_fn(batch_samples):
     max_len = max([i['input_ids'].shape[1] for i in batch_samples])
@@ -112,8 +125,8 @@ def collate_fn(batch_samples):
                 
     batch['input_ids'] = torch.stack(batch['input_ids']).squeeze(1)
     batch['attention_mask'] = torch.stack(batch['attention_mask']).squeeze(1)
-    batch['sub_mask'] = torch.stack(batch['sub_mask'])
-    batch['obj_mask'] = torch.stack(batch['obj_mask'])
+    batch['sub_mask'] = torch.stack(batch['sub_mask']).squeeze(1)
+    batch['obj_mask'] = torch.stack(batch['obj_mask']).squeeze(1)
     batch['labels'] = torch.stack(batch['labels'])
     return batch
 

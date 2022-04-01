@@ -3,7 +3,6 @@ import torch.nn as nn
 from transformers import AutoModel, AutoConfig, BigBirdModel, RobertaPreTrainedModel, BigBirdPreTrainedModel
 import transformers
 
-
 class FCLayer(nn.Module):
     def __init__(self, input_dim, output_dim, dropout_rate=0.0, use_activation=True):
         super(FCLayer, self).__init__()
@@ -17,7 +16,6 @@ class FCLayer(nn.Module):
         if self.use_activation:
             x = self.tanh(x)
         return self.linear(x)
-
 
 class R_BigBird(RobertaPreTrainedModel):
     def __init__(self, config, dropout_rate):

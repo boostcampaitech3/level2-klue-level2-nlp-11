@@ -46,9 +46,9 @@ def num_to_label(label):
 def main():
 	device = torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
 	print(device)
-
-	tokenizer = AutoTokenizer.from_pretrained('klue/roberta-large')
-	model_config =  AutoConfig.from_pretrained('klue/roberta-large')
+	MODEL_NAME = 'klue/roberta-large'
+	tokenizer = AutoTokenizer.from_pretrained(MODEL_NAME)
+	model_config =  AutoConfig.from_pretrained(MODEL_NAME)
 	model = R_BigBird(model_config, 0.1)
 	model.load_state_dict(torch.load('./best_model/pytorch_model.bin'))
 	model.to(device)
