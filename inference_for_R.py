@@ -24,7 +24,7 @@ def inference(model, tokenized_sent, device):
             )
         logits = outputs[1]
         for logit in logits:
-            prob = F.softmax(logit).detach().cpu().numpy().tolist()
+            prob = F.softmax(logit,dim=-1).detach().cpu().numpy().tolist()
             logit = logit.detach().cpu().numpy()
             result = np.argmax(logit)
             

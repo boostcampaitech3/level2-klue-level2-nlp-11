@@ -77,17 +77,14 @@ def train():
     # load dataset
     dataset = load_data_for_R('../dataset/train/train.csv')
 
-    # train_label = label_to_num(dataset['label'].values)
-    # train_label = label_to_num(train_dataset['label'].values)
-    # dev_label = label_to_num(dev_dataset['label'].values)
 
     train_dataset, dev_dataset = split_data(dataset)
 
     # tokenizing dataset
+    #tokenized_train, train_label = convert_sentence_to_features(dataset, tokenizer, 256)
     tokenized_train, train_label = convert_sentence_to_features(train_dataset, tokenizer, 256)
     tokenized_dev, dev_label = convert_sentence_to_features(dev_dataset, tokenizer, 256)
-    # tokenized_train = tokenized_dataset(train_dataset, tokenizer)
-    # tokenized_dev = tokenized_dataset(dev_dataset, tokenizer)
+
 
     train_label = label_to_num(train_label)
     dev_label = label_to_num(dev_label)
@@ -114,7 +111,7 @@ def train():
       output_dir='./results',          # output directory
       save_total_limit=5,              # number of total save model.
       save_steps=500,                 # model saving step.
-      num_train_epochs=3,              # total number of training epochs
+      num_train_epochs=15,              # total number of training epochs
       learning_rate=5e-5,               # learning_rate
       per_device_train_batch_size=32,  # batch size per device during training
       per_device_eval_batch_size=32,   # batch size for evaluation
@@ -122,7 +119,8 @@ def train():
       weight_decay=0.01,               # strength of weight decay
       logging_dir='./logs',            # directory for storing logs
       logging_steps=500,              # log saving step.
-      evaluation_strategy='steps', # evaluation strategy to adopt during training
+      evaluation_strategy='epoch',
+      save_strategy='epoch', # evaluation strategy to adopt during training
                                   # `no`: No evaluation during training.
                                   # `steps`: Evaluate every `eval_steps`.
                                   # `epoch`: Evaluate every end of epoch.

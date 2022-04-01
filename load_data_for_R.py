@@ -163,10 +163,11 @@ def convert_sentence_to_features(dataset, tokenizer, max_len):
             sub_mask = [0] * len(attention_mask)
             obj_mask = [0] * len(attention_mask)
 
-            for i in range(subs_p+1, sube_p):
-                sub_mask[i] = 1
-            for i in range(objs_p+1, obje_p):
-                obj_mask[i] = 1
+            sub_mask[subs_p] = 1
+            sub_mask[sube_p] = 1
+            obj_mask[objs_p] = 1
+            obj_mask[obje_p] = 1
+       
 
             assert len(input_ids) == max_seq_len, "Error with input length {} vs {}".format(len(input_ids), max_seq_len)
             assert len(attention_mask) == max_seq_len, "Error with attention mask length {} vs {}".format(
