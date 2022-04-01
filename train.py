@@ -1,20 +1,18 @@
-import pickle as pickle
+import pickle
 import os
 import pandas as pd
 import torch
+from torch.utils.data import RandomSampler, DataLoader
 import sklearn
 import numpy as np
 from sklearn.metrics import accuracy_score, recall_score, precision_score, f1_score
-from transformers import AutoTokenizer, AutoConfig, AutoModelForSequenceClassification, Trainer, TrainingArguments, RobertaConfig, RobertaTokenizer, RobertaForSequenceClassification, BertTokenizer
-from load_data import *
+from transformers import AutoTokenizer, AutoConfig, AutoModelForSequenceClassification, RobertaForMaskedLM,Trainer, TrainingArguments,  DataCollatorForLanguageModeling,RobertaConfig, RobertaTokenizer, RobertaForSequenceClassification, BertTokenizer, set_seed
+from load_data_for_R import *
+from model_for_R import R_BigBird
 import wandb
 
-from transformers import DataCollatorForLanguageModeling, AutoModelForPreTraining
-from transformers.tokenization_utils import PreTrainedTokenizer
-
-
-wandb.init(project='klue',entity='klue')
-wandb.run.name = 'yonghee/kobigbird 3'
+wandb.init(project='klue', entity='klue')
+wandb.run.name = 'yonghee/pretrain100 roberta'
 
 def klue_re_micro_f1(preds, labels):
     """KLUE-RE micro f1 (except no_relation)"""
@@ -72,86 +70,117 @@ def label_to_num(label):
     
     return num_label
 
-
 def train():
+    set_seed(42)
     # load model and tokenizer
-    # MODEL_NAME = "bert-base-uncased"
-    #MODEL_NAME = "klue/roberta-base"
-    MODEL_NAME = 'monologg/kobigbird-bert-base'
-    tokenizer = AutoTokenizer.from_pretrained(MODEL_NAME)
+    tokenizer = AutoTokenizer.from_pretrained('./vocab_robertaLarge')
 
     # load dataset
-    dataset = load_data("../dataset/train/train.csv")
-    test_dataset = load_data("../dataset/test/test_data.csv")
+    dataset = load_data_for_R('../dataset/train/train.csv')
+    
+    #masked_dataset =random_masking_df(dataset, tokenizer) # 마스킹 작업
+    # train_label = label_to_num(dataset['label'].values)
+    # train_label = label_to_num(train_dataset['label'].values)
+    # dev_label = label_to_num(dev_dataset['label'].values)
 
-    train_dataset, dev_dataset= split_data(dataset)
-
-    #train_label = label_to_num(dataset['label'].values)
-    train_label = label_to_num(train_dataset['label'].values)
-    dev_label = label_to_num(dev_dataset['label'].values)
+    train_dataset, dev_dataset = split_data(dataset)
 
 
-    dataset_label = label_to_num(dataset['label'].values)
+
+    
 
     # tokenizing dataset
-    #tokenized_train = tokenized_dataset(dataset, tokenizer)
-    tokenized_train = tokenized_dataset(train_dataset, tokenizer)
-    tokenized_dev = tokenized_dataset(dev_dataset, tokenizer)
-    tokenized_data = tokenized_dataset(dataset, tokenizer)
-    tokenized_test = tokenized_dataset(test_dataset, tokenizer)
+    tokenized_dataset, data_label = convert_sentence_to_features(dataset, tokenizer, 256)
+    tokenized_train, train_label = convert_sentence_to_features(train_dataset, tokenizer, 256)
+    tokenized_dev, dev_label = convert_sentence_to_features(dev_dataset, tokenizer, 256)
+    # tokenized_train = tokenized_dataset(train_dataset, tokenizer)
+    # tokenized_dev = tokenized_dataset(dev_dataset, tokenizer)
+
+    train_label = label_to_num(train_label)
+    dev_label = label_to_num(dev_label)
+    data_label = label_to_num(data_label)
 
     # make dataset for pytorch.
-    RE_train_dataset = RE_Dataset(tokenized_train, train_label)
-    RE_dev_dataset = RE_Dataset(tokenized_dev, dev_label)
-    RE_dataset = RE_Dataset(tokenized_data, dataset_label)
-
-
+    RE_train_dataset = RE_Dataset_for_R(tokenized_train, train_label, train=True)
+    RE_dev_dataset = RE_Dataset_for_R(tokenized_dev, dev_label, train=True)
+    RE_dataset = RE_Dataset_for_R(tokenized_dataset, data_label, train=True)
+    
     device = torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
 
     print(device)
-
-    #@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
-#     data_collator = DataCollatorForLanguageModeling(    # [MASK] 를 씌우는 것은 저희가 구현하지 않아도 됩니다! :-)
-#         tokenizer=tokenizer, mlm=True, mlm_probability=0.15
-#     )
-#     model_config =  AutoConfig.from_pretrained(MODEL_NAME)
-#     model = AutoModelForPreTraining.from_pretrained(MODEL_NAME, config=model_config)
-#     model.num_parameters()
-#     model.parameters
-#     model.to(device)
-#     print("pretraining start")
-#     training_args = TrainingArguments(
-#         output_dir='model_output',
-#         overwrite_output_dir=True,
-#         num_train_epochs=100,
-#         per_gpu_train_batch_size=32,
-#         save_steps=1000,
-#         save_total_limit=2,
-#         logging_steps=100
-# )
-
-#     trainer = Trainer(
-#         model=model,
-#         args=training_args,
-#         data_collator=data_collator,
-#         train_dataset=RE_dataset
-#     )
-#     trainer.train()
-#     print("pretraining finish")
-#     print("save model")
-#     print("...")
-#     trainer.save_model('./model_output')
-#     print("done")
-    
-    #@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
     # setting model hyperparameter
-    MODEL_NAME = 'monologg/kobigbird-bert-base'
+    model_config =  AutoConfig.from_pretrained('klue/roberta-large')
+    # model_config.num_labels = 30
+
+
+
+      #@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
+    data_collator = DataCollatorForLanguageModeling(    # [MASK] 를 씌우는 것은 저희가 구현하지 않아도 됩니다! :-)
+        tokenizer=tokenizer, mlm=True, mlm_probability=0.15
+    )
+    test_dataset = load_data_for_R('../dataset/test/test_data.csv')
+
+    # model_config =  AutoConfig.from_pretrained(MODEL_NAME)
+    # model = AutoModelForPreTraining.from_pretrained(MODEL_NAME, config=model_config)
+    test_data_label = test_dataset['label'].values
+    tokenized_test_dataset = tokenizer(
+        list(test_dataset['sentence']),
+        return_tensors="pt",
+        padding=True,
+        truncation=True,
+        max_length=256,
+        add_special_tokens=True,
+        )
+    
+    mlm_dataset = Mlm_Dataset_for_R(tokenized_test_dataset, test_data_label)
+
+    model = RobertaForMaskedLM.from_pretrained('klue/roberta-large')
+    model.num_parameters()
+    model.parameters
+    model.to(device)
+
+    print("pretraining start")
+    training_args = TrainingArguments(
+        output_dir='tapt_model_output',
+        overwrite_output_dir=True,
+        num_train_epochs=50,
+        per_gpu_train_batch_size = 16,
+        save_steps=1000,
+        save_total_limit=2,
+        logging_steps=100
+)
+
+    trainer = Trainer(
+        model=model,
+        args=training_args,
+        data_collator=data_collator,
+        train_dataset=mlm_dataset
+    )
+    trainer.train()
+    print("pretraining finish")
+    print("save model")
+    trainer.save_model('./tapt_model_output')
+    print("done")
+    
+#     #@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
+#     # setting model hyperparameter
+
+
+    MODEL_NAME = './tapt_model_output'
+    
+    # print(model.config)
+    # model.parameters
+    
     model_config =  AutoConfig.from_pretrained(MODEL_NAME)
+    model = R_BigBird(model_config, 0.1)
     model_config.num_labels = 30
-    model =  AutoModelForSequenceClassification.from_pretrained(MODEL_NAME, config=model_config)
     print(model.config)
     model.parameters
     model.to(device)
+    
+    
+  
+
   
   # 사용한 option 외에도 다양한 option들이 있습니다.
   # https://huggingface.co/transformers/main_classes/trainer.html#trainingarguments 참고해주세요.
@@ -159,16 +188,15 @@ def train():
       output_dir='./results',          # output directory
       save_total_limit=5,              # number of total save model.
       save_steps=500,                 # model saving step.
-      num_train_epochs=4,              # total number of training epochs
-      learning_rate=5e-5,               # learning_rate
-      per_device_train_batch_size=64,  # batch size per device during training
-      per_device_eval_batch_size=64,   # batch size for evaluation
+      num_train_epochs=2,              # total number of training epochs
+      learning_rate=5e-5,               # learning_rate  
+      per_device_train_batch_size=32,  # batch size per device during training
+      per_device_eval_batch_size=32,   # batch size for evaluation
       warmup_steps=500,                # number of warmup steps for learning rate scheduler
       weight_decay=0.01,               # strength of weight decay
       logging_dir='./logs',            # directory for storing logs
-      logging_steps=100,              # log saving step.
-      evaluation_strategy='epoch',
-      save_strategy='epoch', # evaluation strategy to adopt during training
+      logging_steps=500,              # log saving step.
+      evaluation_strategy='steps', # evaluation strategy to adopt during training
                                   # `no`: No evaluation during training.
                                   # `steps`: Evaluate every `eval_steps`.
                                   # `epoch`: Evaluate every end of epoch.
@@ -179,7 +207,7 @@ def train():
     trainer = Trainer(
       model=model,                         # the instantiated 🤗 Transformers model to be trained
       args=training_args,                  # training arguments, defined above
-      train_dataset=RE_train_dataset,         # training dataset
+      train_dataset=RE_dataset,         # training dataset
       eval_dataset=RE_dev_dataset,             # evaluation dataset
       compute_metrics=compute_metrics         # define metrics function
     )
@@ -187,6 +215,7 @@ def train():
     # train model
     trainer.train()
     model.save_pretrained('./best_model')
+
 def main():
     train()
 

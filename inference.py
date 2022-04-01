@@ -1,40 +1,37 @@
-from transformers import AutoTokenizer, AutoConfig, AutoModelForSequenceClassification, Trainer, TrainingArguments
-from torch.utils.data import DataLoader
-from load_data import *
-import pandas as pd
+from transformers import AutoTokenizer, AutoModelForSequenceClassification, AutoModel, BigBirdModel, AutoConfig
 import torch
+from torch.utils.data import DataLoader
+from load_data_for_R import *
+from model_for_R import *
+from tqdm import tqdm
+import numpy as np
 import torch.nn.functional as F
 
-import pickle as pickle
-import numpy as np
-import argparse
-from tqdm import tqdm
 
 def inference(model, tokenized_sent, device):
-  """
-    test dataset을 DataLoader로 만들어 준 후,
-    batch_size로 나눠 model이 예측 합니다.
-  """
-  dataloader = DataLoader(tokenized_sent, batch_size=16, shuffle=False)
-  model.eval()
-  output_pred = []
-  output_prob = []
-  for i, data in enumerate(tqdm(dataloader)):
-    with torch.no_grad():
-      outputs = model(
-          input_ids=data['input_ids'].to(device),
-          attention_mask=data['attention_mask'].to(device),
-          token_type_ids=data['token_type_ids'].to(device)
-          )
-    logits = outputs[0]
-    prob = F.softmax(logits, dim=-1).detach().cpu().numpy()
-    logits = logits.detach().cpu().numpy()
-    result = np.argmax(logits, axis=-1)
+    dataloader = DataLoader(tokenized_sent, batch_size=32, shuffle=False)
+    model.eval()
+    output_pred = []
+    output_prob = []
+    for i, data in enumerate(tqdm(dataloader)):
+        with torch.no_grad():
+            outputs = model(
+                input_ids = data['input_ids'].to(device),
+                attention_mask = data['attention_mask'].to(device),
+                sub_mask = data['sub_mask'].to(device),
+                obj_mask = data['obj_mask'].to(device),
+                labels = data['labels'].to(device)
+            )
+        logits = outputs[1]
+        for logit in logits:
+            prob = F.softmax(logit).detach().cpu().numpy().tolist()
+            logit = logit.detach().cpu().numpy()
+            result = np.argmax(logit)
+            
+            output_prob.append(prob)
+            output_pred.append(result)
 
-    output_pred.append(result)
-    output_prob.append(prob)
-  
-  return np.concatenate(output_pred).tolist(), np.concatenate(output_prob, axis=0).tolist()
+    return output_pred, output_prob
 
 def num_to_label(label):
   """
@@ -48,55 +45,32 @@ def num_to_label(label):
   
   return origin_label
 
-def load_test_dataset(dataset_dir, tokenizer):
-  """
-    test dataset을 불러온 후,
-    tokenizing 합니다.
-  """
-  test_dataset = load_data(dataset_dir)
-  test_label = list(map(int,test_dataset['label'].values))
-  # tokenizing dataset
-  tokenized_test = tokenized_dataset(test_dataset, tokenizer)
-  return test_dataset['id'], tokenized_test, test_label
 
-def main(args):
-  """
-    주어진 dataset csv 파일과 같은 형태일 경우 inference 가능한 코드입니다.
-  """
-  device = torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
-  # load tokenizer
-  Tokenizer_NAME = 'monologg/kobigbird-bert-base'
-  tokenizer = AutoTokenizer.from_pretrained(Tokenizer_NAME)
+device = torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
+print(device)
 
-  ## load my model
-  MODEL_NAME = args.model_dir # model dir.
-  model = AutoModelForSequenceClassification.from_pretrained(args.model_dir)
-  model.parameters
-  model.to(device)
+tokenizer = AutoTokenizer.from_pretrained('./vocab_robertaLarge')
 
-  ## load test datset
-  test_dataset_dir = "../dataset/test/test_data.csv"
-  test_id, test_dataset, test_label = load_test_dataset(test_dataset_dir, tokenizer)
-  Re_test_dataset = RE_Dataset(test_dataset ,test_label)
+model_config =  AutoConfig.from_pretrained('klue/roberta-large')
+model = R_BigBird(model_config, 0.1)
+model.load_state_dict(torch.load('./best_model/pytorch_model.bin'))
+model.to(device)
 
-  ## predict answer
-  pred_answer, output_prob = inference(model, Re_test_dataset, device) # model에서 class 추론
-  pred_answer = num_to_label(pred_answer) # 숫자로 된 class를 원래 문자열 라벨로 변환.
-  
-  ## make csv file with predicted answer
-  #########################################################
-  # 아래 directory와 columns의 형태는 지켜주시기 바랍니다.
-  output = pd.DataFrame({'id':test_id,'pred_label':pred_answer,'probs':output_prob,})
+dataset = load_data_for_R('../dataset/test/test_data.csv')
 
-  output.to_csv('./prediction/submission.csv', index=False) # 최종적으로 완성된 예측한 라벨 csv 파일 형태로 저장.
-  #### 필수!! ##############################################
-  print('---- Finish! ----')
-if __name__ == '__main__':
-  parser = argparse.ArgumentParser()
-  
-  # model dir
-  parser.add_argument('--model_dir', type=str, default="./best_model")
-  args = parser.parse_args()
-  print(args)
-  main(args)
-  
+tokenized_train, train_label = convert_sentence_to_features(dataset, tokenizer, 256)
+
+RE_dataset = RE_Dataset_for_R(tokenized_train, train_label, train=False)
+
+output_pred, output_prob = inference(model, RE_dataset, device)
+
+original_label = num_to_label(output_pred)
+
+test = pd.read_csv('../dataset/test/test_data.csv')
+test_id = test['id'].to_list()
+
+output = pd.DataFrame({'id':test_id, 'pred_label':original_label, 'probs':output_prob})
+
+output.to_csv('./prediction/submission.csv', index=False)
+
+print('Finish!!!!!!!!!')
