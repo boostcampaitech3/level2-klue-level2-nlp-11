@@ -1,12 +1,9 @@
 import pickle
-import os
-import pandas as pd
 import torch
-from torch.utils.data import RandomSampler, DataLoader
 import sklearn
 import numpy as np
-from sklearn.metrics import accuracy_score, recall_score, precision_score, f1_score
-from transformers import AutoTokenizer, AutoConfig, AutoModelForSequenceClassification, Trainer, TrainingArguments, RobertaConfig, RobertaTokenizer, RobertaForSequenceClassification, BertTokenizer, set_seed
+from sklearn.metrics import accuracy_score
+from transformers import AutoTokenizer, AutoConfig, Trainer, TrainingArguments, set_seed
 from load_data_for_R import *
 from model_for_R import R_BigBird
 import wandb
@@ -72,29 +69,25 @@ def label_to_num(label):
 def train():
     set_seed(42)
     # load model and tokenizer
-    tokenizer = AutoTokenizer.from_pretrained('./vocab_robertaLarge')
+    tokenizer = AutoTokenizer.from_pretrained('klue/roberta-large')
 
     # load dataset
-    dataset = load_data_for_R('../dataset/train/train.csv')
-
-    # train_label = label_to_num(dataset['label'].values)
-    # train_label = label_to_num(train_dataset['label'].values)
-    # dev_label = label_to_num(dev_dataset['label'].values)
-
+    dataset = load_data('../dataset/train/train.csv')
     train_dataset, dev_dataset = split_data(dataset)
 
     # tokenizing dataset
-    tokenized_train, train_label = convert_sentence_to_features(train_dataset, tokenizer, 256)
-    tokenized_dev, dev_label = convert_sentence_to_features(dev_dataset, tokenizer, 256)
-    # tokenized_train = tokenized_dataset(train_dataset, tokenizer)
-    # tokenized_dev = tokenized_dataset(dev_dataset, tokenizer)
+    tokenized_train = tokenized_dataset(train_dataset, tokenizer)
+    tokenized_dev = tokenized_dataset(dev_dataset, tokenizer)
 
-    train_label = label_to_num(train_label)
-    dev_label = label_to_num(dev_label)
+    train_sampler = make_sampler(tokenized_train, batch_size=32, max_pad_len=20)
+    valid_sampler = make_sampler(tokenized_dev, batch_size=32, max_pad_len=100)
+
+    train_label = label_to_num(train_dataset['label'].values)
+    dev_label = label_to_num(dev_dataset['label'].values)
 
     # make dataset for pytorch.
-    RE_train_dataset = RE_Dataset_for_R(tokenized_train, train_label, train=True)
-    RE_dev_dataset = RE_Dataset_for_R(tokenized_dev, dev_label, train=True)
+    RE_train_dataset = RE_Dataset(tokenized_train, train_label)
+    RE_dev_dataset = RE_Dataset(tokenized_dev, dev_label)
 
     device = torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
 
@@ -104,8 +97,6 @@ def train():
     # model_config.num_labels = 30
 
     model = R_BigBird(model_config, 0.1)
-    # print(model.config)
-    # model.parameters
     model.to(device)
   
   # 사용한 option 외에도 다양한 option들이 있습니다.
@@ -114,7 +105,7 @@ def train():
       output_dir='./results',          # output directory
       save_total_limit=5,              # number of total save model.
       save_steps=500,                 # model saving step.
-      num_train_epochs=3,              # total number of training epochs
+      num_train_epochs=5,              # total number of training epochs
       learning_rate=5e-5,               # learning_rate
       per_device_train_batch_size=32,  # batch size per device during training
       per_device_eval_batch_size=32,   # batch size for evaluation
@@ -130,14 +121,15 @@ def train():
       load_best_model_at_end = True, 
       report_to='wandb'
     )
-    trainer = Trainer(
-      model=model,                         # the instantiated 🤗 Transformers model to be trained
-      args=training_args,                  # training arguments, defined above
-      train_dataset=RE_train_dataset,         # training dataset
-      eval_dataset=RE_dev_dataset,             # evaluation dataset
-      compute_metrics=compute_metrics         # define metrics function
+    trainer = BucketTrainer(
+        model=model,                         # the instantiated 🤗 Transformers model to be trained
+        args=training_args,                  # training arguments, defined above
+        train_dataset=RE_train_dataset,         # training dataset
+        eval_dataset=RE_dev_dataset,             # evaluation dataset
+        compute_metrics=compute_metrics         # define metrics function
     )
-
+    trainer.train_sampler = train_sampler
+    trainer.valid_sampler = valid_sampler
     # train model
     trainer.train()
     model.save_pretrained('./best_model')

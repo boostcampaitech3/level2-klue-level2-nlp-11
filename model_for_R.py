@@ -65,13 +65,14 @@ class R_BigBird(RobertaPreTrainedModel):
         logits = self.label_classifier(concat_h)
         outputs = (logits,) + outputs[2:]
 
-        loss_fct = nn.CrossEntropyLoss()
-        loss = loss_fct(logits.view(-1, self.num_labels), labels.view(-1))
-        outputs = (loss,) + outputs
+        if labels is not None:
+            if self.num_labels == 1:
+                loss_fct = nn.MSELoss()
+                loss = loss_fct(logits.view(-1), labels.view(-1))
+            else:
+                loss_fct = nn.CrossEntropyLoss()
+                loss = loss_fct(logits.view(-1, self.num_labels), labels.view(-1))
+
+            outputs = (loss,) + outputs
 
         return outputs
-
-# config = AutoConfig.from_pretrained('monologg/kobigbird-bert-base')
-# model = R_BigBird(config, 0.1)
-# print(model)
-# print(config)
