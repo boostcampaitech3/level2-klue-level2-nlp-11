@@ -49,9 +49,12 @@ class BucketTrainer(Trainer):
             return DataLoader(self.eval_dataset, batch_sampler=self.valid_sampler, collate_fn=collate_fn)
 
 def load_data(dataset_dir):
-    dataset = pd.read_csv(dataset_dir,
-                converters={'subject_entity':literal_eval, 'object_entity': literal_eval})
-
+    dataset = pd.read_csv(dataset_dir)
+    if 'train' in dataset_dir:
+        dataset = clean_dataset(dataset)
+    dataset['subject_entity'] = dataset['subject_entity'].map(literal_eval)
+    dataset['object_entity'] = dataset['object_entity'].map(literal_eval)
+    
     return dataset
 
 def tokenized_dataset(dataset, tokenizer):
@@ -137,3 +140,27 @@ def split_data(dataset):
         dev_dataset = dataset.loc[dev_index]
     
     return train_dataset,dev_dataset
+
+def clean_dataset(dataset):
+    # mislabeling 수정
+    dataset = dataset.drop_duplicates(['sentence','subject_entity','object_entity','label'])
+    dataset.loc[dataset['id'] == 32107, 'subject_entity'] = "{'word': '이용빈', 'start_idx': 0, 'end_idx': 2, 'type': 'PER'}"
+    dataset.loc[dataset['id'] == 1435, 'object_entity'] = "{'word': '조오섭', 'start_idx': 0, 'end_idx': 2, 'type': 'PER'}"
+    dataset.loc[dataset['id'] == 9269, 'object_entity'] = "{'word': '김성진', 'start_idx': 21, 'end_idx': 23, 'type': 'PER'}"
+    dataset.loc[dataset['id'] == 30870, 'object_entity'] = "{'word': '김성진', 'start_idx': 21, 'end_idx': 23, 'type': 'PER'}"
+    dataset.loc[dataset['id'] == 1334, 'subject_entity'] = "{'word': '김성진', 'start_idx': 21, 'end_idx': 23, 'type': 'PER'}"
+    dataset.loc[dataset['id'] == 30530, 'subject_entity'] = "{'word': '김성진', 'start_idx': 21, 'end_idx': 23, 'type': 'PER'}"
+    dataset.loc[dataset['id'] == 8477, 'object_entity'] = "{'word': '김성진', 'start_idx': 21, 'end_idx': 23, 'type': 'PER'}"
+
+    # index오류 수정
+    dataset.loc[dataset['id'] == 13780, 'object_entity'] = "{'word': '시동', 'start_idx': 4, 'end_idx': 5, 'type': 'POH'}"
+    dataset.loc[dataset['id'] == 15584, 'object_entity'] = "{'word': '시동', 'start_idx': 4, 'end_idx': 5, 'type': 'POH'}"
+    dataset.loc[dataset['id'] == 630, 'object_entity'] = "{'word': '시동', 'start_idx': 44, 'end_idx': 45, 'type': 'POH'}"
+    dataset.loc[dataset['id'] == 25109, 'object_entity'] = "{'word': '은교', 'start_idx': 4, 'end_idx': 5, 'type': 'POH'}"
+    dataset.loc[dataset['id'] == 25756, 'object_entity'] = "{'word': '스승의 은혜', 'start_idx': 13, 'end_idx': 18, 'type': 'POH'}"
+
+    drop_ids = [18458, 6749, 8364, 11511, 25094, 277, 19074] # 19074:스승의 은혜
+    dataset = dataset[dataset['id'].map(lambda x: x not in drop_ids)] # mislabeling drop
+    dataset = dataset.reset_index(drop=True)
+
+    return dataset
