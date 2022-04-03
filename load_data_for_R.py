@@ -24,9 +24,9 @@ class RE_Dataset(torch.utils.data.Dataset):
 
         for tar in [65, 36]:
             mask_temp = torch.zeros_like(item['input_ids'])
-            start_idx = list(item['input_ids'].squeeze()).index(tar) + 1
-            end_idx = list(item['input_ids'].squeeze()).index(tar, start_idx)
-            mask_temp[:, start_idx:end_idx] = 1
+            start_idx = list(item['input_ids'].squeeze()).index(tar)
+            end_idx = list(item['input_ids'].squeeze()).index(tar, start_idx+ 1)
+            mask_temp[:, start_idx:end_idx+1] = 1
 
             if tar == 65:
                 item['sub_mask'] = mask_temp
@@ -64,11 +64,11 @@ def tokenized_dataset(dataset, tokenizer):
     for row in dataset.itertuples():
         temp = [i for i in row.sentence]
         if row.sub_start_idx > row.obj_start_idx:
-            temp[row.sub_start_idx:row.sub_end_idx+1] = [f'^{row.sub_word}^']
-            temp[row.obj_start_idx:row.obj_end_idx+1] = [f'@{row.obj_word}@']
+            temp[row.sub_start_idx:row.sub_end_idx+1] = [f'^#{row.sub_type}#{row.sub_word}^']
+            temp[row.obj_start_idx:row.obj_end_idx+1] = [f'@+{row.obj_type}+{row.obj_word}@']
         else:
-            temp[row.obj_start_idx:row.obj_end_idx+1] = [f'@{row.obj_word}@']
-            temp[row.sub_start_idx:row.sub_end_idx+1] = [f'^{row.sub_word}^']
+            temp[row.obj_start_idx:row.obj_end_idx+1] = [f'@+{row.obj_type}+{row.obj_word}@']
+            temp[row.sub_start_idx:row.sub_end_idx+1] = [f'^#{row.sub_type}#{row.sub_word}^']
 
         tokenized_sentences = tokenizer(
                 ''.join(temp),

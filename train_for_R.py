@@ -79,8 +79,8 @@ def train():
     tokenized_train = tokenized_dataset(train_dataset, tokenizer)
     tokenized_dev = tokenized_dataset(dev_dataset, tokenizer)
 
-    train_sampler = make_sampler(tokenized_train, batch_size=32, max_pad_len=20)
-    valid_sampler = make_sampler(tokenized_dev, batch_size=32, max_pad_len=100)
+    train_sampler = make_sampler(tokenized_train, batch_size=32, max_pad_len=5)
+    valid_sampler = make_sampler(tokenized_dev, batch_size=32, max_pad_len=10)
 
     train_label = label_to_num(train_dataset['label'].values)
     dev_label = label_to_num(dev_dataset['label'].values)
@@ -119,8 +119,11 @@ def train():
                                   # `epoch`: Evaluate every end of epoch.
       eval_steps = 100,            # evaluation step.
       load_best_model_at_end = True, 
+      metric_for_best_model = 'auprc',
+      greater_is_better = True,
       report_to='wandb'
     )
+
     trainer = BucketTrainer(
         model=model,                         # the instantiated 🤗 Transformers model to be trained
         args=training_args,                  # training arguments, defined above
@@ -128,6 +131,7 @@ def train():
         eval_dataset=RE_dev_dataset,             # evaluation dataset
         compute_metrics=compute_metrics         # define metrics function
     )
+
     trainer.train_sampler = train_sampler
     trainer.valid_sampler = valid_sampler
     # train model

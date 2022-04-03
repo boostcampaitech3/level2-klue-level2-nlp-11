@@ -53,11 +53,10 @@ class R_BigBird(RobertaPreTrainedModel):
 
         e1_h = self.entity_average(sequence_output, sub_mask)
         e2_h = self.entity_average(sequence_output, obj_mask)
-
-        sentence_representation = self.cls_fc_layer(outputs.pooler_output)
-
         e1_h = self.entity_fc_layer1(e1_h)
         e2_h = self.entity_fc_layer2(e2_h)
+
+        sentence_representation = self.cls_fc_layer(outputs.pooler_output)
 
         concat_h = torch.cat([sentence_representation, e1_h, e2_h], dim=-1)
         logits = self.label_classifier(concat_h)
