@@ -19,18 +19,8 @@ class RE_Dataset(torch.utils.data.Dataset):
         self.labels = labels
 
     def __getitem__(self, idx):
-        item = {key:val for key,val in self.pair_dataset[idx].items()}
+        item = self.pair_dataset[idx]
         item['labels'] = torch.tensor(self.labels[idx])
-
-        for tar in [65, 36]:
-            mask_temp = torch.zeros_like(item['input_ids'])
-            start_idx = list(item['input_ids'].squeeze()).index(tar)
-            end_idx = list(item['input_ids'].squeeze()).index(tar, start_idx+ 1)
-            mask_temp[:, start_idx:end_idx+1] = 1
-
-            if tar == 65:
-                item['sub_mask'] = mask_temp
-            else: item['obj_mask'] = mask_temp
             
         return item
 
@@ -85,6 +75,18 @@ def tokenized_dataset(dataset, tokenizer):
 
     return tokens
 
+def make_entity_mask(tokens):
+    for token in tokens:
+        for tar, name in zip([65, 36, 7, 15], ['sub_mask', 'obj_mask', 'sub_type', 'obj_type']):
+            mask_temp = torch.zeros_like(token['input_ids'])
+            sentence = list(token['input_ids'].squeeze())
+            start_idx = sentence.index(tar)
+            end_idx = sentence.index(tar, start_idx+ 1)
+            mask_temp[:, start_idx:end_idx+1] = 1
+
+            token[name] = mask_temp
+    return tokens
+
 def make_sampler(data, batch_size=64, max_pad_len=20):
     sentence_length = [sen['input_ids'].shape[1] for sen in data]
     bucket_dict = defaultdict(list)
@@ -133,13 +135,16 @@ def collate_fn(batch_samples):
     batch['labels'] = torch.stack(batch['labels'])
     return batch
 
-def split_data(dataset):
-    split = StratifiedShuffleSplit(n_splits=1, test_size=0.1, random_state=42)
+def split_data(dataset, num_splits):
+    if num_splits == 1:
+        test_size = 0.1
+    else: test_size = 0.2
+    split = StratifiedShuffleSplit(n_splits=num_splits, test_size=test_size, random_state=42)
     for train_index, dev_index in split.split(dataset, dataset["label"]):
         train_dataset = dataset.loc[train_index]
         dev_dataset = dataset.loc[dev_index]
     
-    return train_dataset,dev_dataset
+        yield train_dataset, dev_dataset
 
 def clean_dataset(dataset):
     # mislabeling 수정
