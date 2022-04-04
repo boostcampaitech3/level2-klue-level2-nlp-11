@@ -2,6 +2,8 @@ import torch
 import torch.nn as nn
 from transformers import AutoModel, AutoConfig, BigBirdModel, RobertaPreTrainedModel, BigBirdPreTrainedModel
 import transformers
+from Loss import FocalLoss
+import torch.nn.functional as F
 
 class FCLayer(nn.Module):
     def __init__(self, input_dim, output_dim, dropout_rate=0.0, use_activation=True):
@@ -28,7 +30,7 @@ class R_BigBird(RobertaPreTrainedModel):
         self.cls_fc_layer = FCLayer(self.config.hidden_size, self.config.hidden_size, dropout_rate)
         self.entity_fc_layer1 = FCLayer(self.config.hidden_size, self.config.hidden_size, dropout_rate)
         self.entity_fc_layer2 = FCLayer(self.config.hidden_size, self.config.hidden_size, dropout_rate)
-
+     
         self.label_classifier = FCLayer(
             self.config.hidden_size * 3,
             self.config.num_labels,
@@ -68,8 +70,10 @@ class R_BigBird(RobertaPreTrainedModel):
                 loss = loss_fct(logits.view(-1), labels.view(-1))
             else:
                 loss_fct = nn.CrossEntropyLoss()
-                loss = loss_fct(logits.view(-1, self.num_labels), labels.view(-1))
-
+                loss_focal = FocalLoss()
+                #loss_1 = loss_fct(logits, labels)
+                loss = loss_focal(logits, F.one_hot(labels, num_classes=30))
+                #loss = loss_1*0.6 + loss_2*0.4
             outputs = (loss,) + outputs
 
         return outputs

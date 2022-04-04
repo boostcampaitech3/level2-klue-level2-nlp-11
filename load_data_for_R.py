@@ -77,12 +77,13 @@ def tokenized_dataset(dataset, tokenizer):
 
 def make_entity_mask(tokens):
     for token in tokens:
-        for tar, name in zip([65, 36, 7, 15], ['sub_mask', 'obj_mask', 'sub_type', 'obj_type']):
+        for tar, name in zip([65, 36], ['sub_mask', 'obj_mask']):
             mask_temp = torch.zeros_like(token['input_ids'])
             sentence = list(token['input_ids'].squeeze())
             start_idx = sentence.index(tar)
             end_idx = sentence.index(tar, start_idx+ 1)
-            mask_temp[:, start_idx:end_idx+1] = 1
+            mask_temp[:, start_idx:end_idx+1] = 1 # start ^,@ 부터 end ^,@ 까지 1 masking
+            # mask_temp[:, [start_idx,end_idx]] = 1 # ^,@ 위치에만 1 masking
 
             token[name] = mask_temp
     return tokens

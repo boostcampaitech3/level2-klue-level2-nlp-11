@@ -67,13 +67,13 @@ def label_to_num(label):
 
 def train():
     set_seed(42)
-    #wandb.init(project='klue', entity='klue')
+    wandb.init(project='klue', entity='klue')
     # load model and tokenizer
     tokenizer = AutoTokenizer.from_pretrained('klue/roberta-large')
 
     # load dataset
     dataset = load_data('../dataset/train/train.csv')
-    num_splits = 5
+    num_splits = 1
     for fold, (train_dataset,dev_dataset) in enumerate(split_data(dataset, num_splits=num_splits), 1):
         # tokenizing dataset
         tokenized_train = tokenized_dataset(train_dataset, tokenizer)
@@ -108,23 +108,18 @@ def train():
         output_dir='./results',          # output directory
         save_total_limit=7,              # number of total save model.
         save_steps=500,                 # model saving step.
-        num_train_epochs=1,              # total number of training epochs
+        num_train_epochs=4,              # total number of training epochs
         learning_rate=5e-5,               # learning_rate
-        per_device_train_batch_size=32,  # batch size per device during training
-        per_device_eval_batch_size=32,   # batch size for evaluation
-        warmup_steps=500,                # number of warmup steps for learning rate scheduler
+        warmup_steps=300,                # number of warmup steps for learning rate scheduler
         weight_decay=0.01,               # strength of weight decay
-        logging_dir='./logs',            # directory for storing logs
-        logging_steps=500,              # log saving step.
-        evaluation_strategy='steps', # evaluation strategy to adopt during training
-                                    # `no`: No evaluation during training.
-                                    # `steps`: Evaluate every `eval_steps`.
-                                    # `epoch`: Evaluate every end of epoch.
-        eval_steps = 100,            # evaluation step.
+        evaluation_strategy='steps',
+        eval_steps=100,
         load_best_model_at_end = True, 
         metric_for_best_model = 'micro f1 score',
         greater_is_better = True,
-        report_to='wandb'
+        report_to='wandb',
+        fp16=True,
+        fp16_opt_level='O1'
         )
 
         trainer = BucketTrainer(

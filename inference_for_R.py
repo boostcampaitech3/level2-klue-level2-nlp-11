@@ -55,6 +55,7 @@ def main():
 
 	dataset = load_data('../dataset/test/test_data.csv')
 	tokenized_test = tokenized_dataset(dataset, tokenizer)
+	tokenized_test = make_entity_mask(tokenized_test)
 	test_label = list(map(int,dataset['label'].values))
 	RE_dataset_test = RE_Dataset(tokenized_test, test_label)
 
