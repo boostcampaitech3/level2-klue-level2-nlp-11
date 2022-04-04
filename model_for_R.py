@@ -27,17 +27,33 @@ class R_BigBird(RobertaPreTrainedModel):
         self.model_config.num_labels = 30
         self.num_labels = 30
 
+
+        self.hidden_dim = self.model_config.hidden_size
+        self.lstm= nn.LSTM(input_size= self.hidden_dim, hidden_size= self.hidden_dim, num_layers= 2, dropout= 0.2,
+                            batch_first= True, bidirectional= True)
+        self.fc= nn.Linear(self.hidden_dim*2, self.model_config.num_labels)
+
+
+
+
+
+
         self.cls_fc_layer = FCLayer(self.config.hidden_size, self.config.hidden_size, dropout_rate)
         self.entity_fc_layer1 = FCLayer(self.config.hidden_size, self.config.hidden_size, dropout_rate)
         self.entity_fc_layer2 = FCLayer(self.config.hidden_size, self.config.hidden_size, dropout_rate)
 
+        #self.label_classifier = FCLayer(
+        #    self.config.hidden_size * 3,
+        #    self.config.num_labels,
+        #    dropout_rate,
+        #    use_activation=False
+        #)
         self.label_classifier = FCLayer(
-            self.config.hidden_size * 3,
+            self.config.hidden_size * 2,
             self.config.num_labels,
             dropout_rate,
             use_activation=False
         )
-
     @staticmethod
     def entity_average(hidden_output, e_mask):
         e_mask_unsqueeze = e_mask.unsqueeze(1)
@@ -47,22 +63,32 @@ class R_BigBird(RobertaPreTrainedModel):
         avg_vector = sum_vector.float() / length_tensor.float()
         return avg_vector
 
-    def forward(self, input_ids, attention_mask, sub_mask, obj_mask, labels):
+    def forward(self, input_ids, attention_mask,token_type_ids, sub_mask, obj_mask, labels):
         outputs = self.model(
-            input_ids, attention_mask=attention_mask
+            input_ids, attention_mask=attention_mask,token_type_ids=token_type_ids
         )
-        sequence_output = outputs[0]
+        sequence_output = outputs.last_hidden_state
 
         e1_h = self.entity_average(sequence_output, sub_mask)
         e2_h = self.entity_average(sequence_output, obj_mask)
 
-        sentence_representation = self.cls_fc_layer(outputs.pooler_output)
+        sentence_representation=outputs.pooler_output
 
-        e1_h = self.entity_fc_layer1(e1_h)
-        e2_h = self.entity_fc_layer2(e2_h)
 
-        concat_h = torch.cat([sentence_representation, e1_h, e2_h], dim=-1)
-        logits = self.label_classifier(concat_h)
+        #hidden, (last_hidden, last_cell)= self.lstm(sequence_output)
+        #cat_hidden= torch.cat((last_hidden[0], last_hidden[1]), dim= 1)
+        #logits= self.fc(cat_hidden)
+
+        mask=sub_mask+obj_mask
+        sequence_output=sequence_output[mask !=0,:].view(32,-1,self.config.hidden_size)
+        hidden, (last_hidden, last_cell)= self.lstm(sequence_output)
+        cat_hidden= torch.cat((last_hidden[0], last_hidden[1]), dim= 1)
+        logits= self.fc(cat_hidden)
+
+
+
+
+        #logits = self.label_classifier(concat_h)
         outputs = (logits,) + outputs[2:]
 
         loss_fct = nn.CrossEntropyLoss()

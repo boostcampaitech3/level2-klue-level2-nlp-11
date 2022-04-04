@@ -72,26 +72,28 @@ def label_to_num(label):
 def train():
     set_seed(42)
     # load model and tokenizer
-    tokenizer = AutoTokenizer.from_pretrained('./vocab_robertaLarge')
+    #tokenizer = AutoTokenizer.from_pretrained('./vocab_robertaLarge')
+    tokenizer = AutoTokenizer.from_pretrained('klue/roberta-large')
+    
 
     # load dataset
     dataset = load_data_for_R('../dataset/train/train.csv')
 
 
-    train_dataset, dev_dataset = split_data(dataset)
+    #train_dataset, dev_dataset = split_data(dataset)
 
     # tokenizing dataset
-    #tokenized_train, train_label = convert_sentence_to_features(dataset, tokenizer, 256)
-    tokenized_train, train_label = convert_sentence_to_features(train_dataset, tokenizer, 256)
-    tokenized_dev, dev_label = convert_sentence_to_features(dev_dataset, tokenizer, 256)
+    tokenized_train, train_label = convert_sentence_to_features(dataset, tokenizer, 256)
+    #tokenized_train, train_label = convert_sentence_to_features(train_dataset, tokenizer, 256)
+    #tokenized_dev, dev_label = convert_sentence_to_features(dev_dataset, tokenizer, 256)
 
 
     train_label = label_to_num(train_label)
-    dev_label = label_to_num(dev_label)
+    #dev_label = label_to_num(dev_label)
 
     # make dataset for pytorch.
     RE_train_dataset = RE_Dataset_for_R(tokenized_train, train_label, train=True)
-    RE_dev_dataset = RE_Dataset_for_R(tokenized_dev, dev_label, train=True)
+    #RE_dev_dataset = RE_Dataset_for_R(tokenized_dev, dev_label, train=True)
 
     device = torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
 
@@ -101,6 +103,7 @@ def train():
     # model_config.num_labels = 30
 
     model = R_BigBird(model_config, 0.1)
+    model.model.resize_token_embeddings(tokenizer.vocab_size + 12)
     # print(model.config)
     # model.parameters
     model.to(device)
@@ -111,7 +114,7 @@ def train():
       output_dir='./results',          # output directory
       save_total_limit=5,              # number of total save model.
       save_steps=500,                 # model saving step.
-      num_train_epochs=15,              # total number of training epochs
+      num_train_epochs=4,              # total number of training epochs
       learning_rate=5e-5,               # learning_rate
       per_device_train_batch_size=32,  # batch size per device during training
       per_device_eval_batch_size=32,   # batch size for evaluation
@@ -132,7 +135,7 @@ def train():
       model=model,                         # the instantiated 🤗 Transformers model to be trained
       args=training_args,                  # training arguments, defined above
       train_dataset=RE_train_dataset,         # training dataset
-      eval_dataset=RE_dev_dataset,             # evaluation dataset
+      eval_dataset=RE_train_dataset,             # evaluation dataset
       compute_metrics=compute_metrics         # define metrics function
     )
 

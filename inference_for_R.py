@@ -17,6 +17,7 @@ def inference(model, tokenized_sent, device):
         with torch.no_grad():
             outputs = model(
                 input_ids = data['input_ids'].to(device),
+                token_type_ids = data['token_type_ids'].to(device),
                 attention_mask = data['attention_mask'].to(device),
                 sub_mask = data['sub_mask'].to(device),
                 obj_mask = data['obj_mask'].to(device),
@@ -49,10 +50,11 @@ def num_to_label(label):
 device = torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
 print(device)
 
-tokenizer = AutoTokenizer.from_pretrained('./vocab_robertaLarge')
+tokenizer = AutoTokenizer.from_pretrained('klue/roberta-large')
 
 model_config =  AutoConfig.from_pretrained('klue/roberta-large')
 model = R_BigBird(model_config, 0.1)
+model.model.resize_token_embeddings(tokenizer.vocab_size + 12)
 model.load_state_dict(torch.load('./best_model/pytorch_model.bin'))
 model.to(device)
 
