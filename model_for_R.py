@@ -74,13 +74,17 @@ class R_BigBird(RobertaPreTrainedModel):
 
         sentence_representation=outputs.pooler_output
 
-
+        
+        
+        #f1 score : 72.1511	 auprc : 75.7257
         #hidden, (last_hidden, last_cell)= self.lstm(sequence_output)
         #cat_hidden= torch.cat((last_hidden[0], last_hidden[1]), dim= 1)
         #logits= self.fc(cat_hidden)
 
+
+        #f1 score : 71.9474	 auprc : 77.5083
         mask=sub_mask+obj_mask
-        sequence_output=sequence_output[mask !=0,:].view(32,-1,self.config.hidden_size)
+        sequence_output=sequence_output[mask !=0,:].view(-1,16,self.config.hidden_size)
         hidden, (last_hidden, last_cell)= self.lstm(sequence_output)
         cat_hidden= torch.cat((last_hidden[0], last_hidden[1]), dim= 1)
         logits= self.fc(cat_hidden)
