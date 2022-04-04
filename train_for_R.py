@@ -67,13 +67,13 @@ def label_to_num(label):
 
 def train():
     set_seed(42)
-    wandb.init(project='klue', entity='klue')
+    #wandb.init(project='klue', entity='klue')
     # load model and tokenizer
     tokenizer = AutoTokenizer.from_pretrained('klue/roberta-large')
 
     # load dataset
     dataset = load_data('../dataset/train/train.csv')
-    num_splits = 1
+    num_splits = 5
     for fold, (train_dataset,dev_dataset) in enumerate(split_data(dataset, num_splits=num_splits), 1):
         # tokenizing dataset
         tokenized_train = tokenized_dataset(train_dataset, tokenizer)

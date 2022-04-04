@@ -71,8 +71,8 @@ class R_BigBird(RobertaPreTrainedModel):
             else:
                 loss_fct = nn.CrossEntropyLoss()
                 loss_focal = FocalLoss()
-                #loss_1 = loss_fct(logits, labels)
-                loss = loss_focal(logits, F.one_hot(labels, num_classes=30))
+                loss = loss_fct(logits, labels)
+                #loss = loss_focal(logits, F.one_hot(labels, num_classes=30))
                 #loss = loss_1*0.6 + loss_2*0.4
             outputs = (loss,) + outputs
 
