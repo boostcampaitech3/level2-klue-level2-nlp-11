@@ -46,12 +46,6 @@ def num_to_label(label):
 def main():
 	device = torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
 	print(device)
-
-	dataset = load_data('../dataset/test/test_data.csv')
-	tokenized_test = tokenized_dataset(dataset, tokenizer)
-	tokenized_test = make_entity_mask(tokenized_test)
-	test_label = list(map(int,dataset['label'].values))
-	RE_dataset_test = RE_Dataset(tokenized_test, test_label)
 	
 	MODEL_NAME = 'klue/roberta-large'
 	tokenizer = AutoTokenizer.from_pretrained(MODEL_NAME)
@@ -60,6 +54,12 @@ def main():
 	model.load_state_dict(torch.load('./best_model/pytorch_model.bin'))
 	model.to(device) 
 
+	dataset = load_data('../dataset/test/test_data.csv')
+	tokenized_test = tokenized_dataset(dataset, tokenizer)
+	tokenized_test = make_entity_mask(tokenized_test)
+	test_label = list(map(int,dataset['label'].values))
+	RE_dataset_test = RE_Dataset(tokenized_test, test_label)
+	
 	output_pred, output_prob = inference(model, RE_dataset_test, device)
 	original_label = num_to_label(output_pred)
 

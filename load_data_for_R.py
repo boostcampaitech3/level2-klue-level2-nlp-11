@@ -64,6 +64,7 @@ def tokenized_dataset(dataset, tokenizer):
             temp[row.sub_start_idx:row.sub_end_idx+1] = [f'^#{row.sub_type}#{row.sub_word}^']
 
         tokenized_sentences = tokenizer(
+            #f'^#{row.sub_type}#{row.sub_word}^'+' '+ f'@+{row.obj_type}+{row.obj_word}@',
                 ''.join(temp),
                 return_tensors="pt",
                 padding=False,
@@ -83,7 +84,12 @@ def make_entity_mask(tokens):
             start_idx = sentence.index(tar)
             end_idx = sentence.index(tar, start_idx+ 1)
             mask_temp[:, start_idx:end_idx+1] = 1 # start ^,@ 부터 end ^,@ 까지 1 masking
+            
             # mask_temp[:, [start_idx,end_idx]] = 1 # ^,@ 위치에만 1 masking
+
+            # start_idx2 = sentence.index(tar, end_idx+1)
+            # end_idx2 = sentence.index(tar, start_idx2+ 1)
+            # mask_temp[:, start_idx2:end_idx2+1] = 1
 
             token[name] = mask_temp
     return tokens
@@ -168,5 +174,32 @@ def clean_dataset(dataset):
     drop_ids = [18458, 6749, 8364, 11511, 25094, 277, 19074] # 19074:스승의 은혜
     dataset = dataset[dataset['id'].map(lambda x: x not in drop_ids)] # mislabeling drop
     dataset = dataset.reset_index(drop=True)
+
+    return dataset
+
+def delete_outlier(dataset):
+    dataset['duplicated'] = dataset.duplicated('sentence', keep=False)
+    dataset = dataset.sort_values(['sentence','label'])
+    prev_sen, flag, tt = None, False, []
+
+    for row in dataset.itertuples():
+        if row.duplicated == True and row.label != 'no_relation':
+            flag = True 
+            tt.append(False)
+            prev_sen = row.sentence
+            continue
+
+        if row.sentence == prev_sen and flag == True:
+            if row.label == 'no_relation':
+                tt.append(True)
+                prev_sen = row.sentence
+                continue
+                
+        flag = False
+        tt.append(False)
+        prev_sen = row.sentence
+
+    dataset['condition'] = tt
+    dataset = dataset[dataset['condition'] != True].reset_index()
 
     return dataset
