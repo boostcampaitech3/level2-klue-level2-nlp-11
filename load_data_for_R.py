@@ -239,6 +239,7 @@ def convert_sentence_to_features(dataset, tokenizer, max_len):
         #sub_end_id
         sub_end_idx1, sub_end_idx2 = sentence.index(32009,0,sep_idx),sentence.index(32009,sep_idx,-1)
         
+        
         mask1[sub_type_idx1:sub_start_idx1+1]=[1]*3
         mask1[sub_type_idx2:sub_start_idx2+1]=[1]*3
         mask1[sub_end_idx1]=1
