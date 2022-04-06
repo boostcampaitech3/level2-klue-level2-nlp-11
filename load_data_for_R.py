@@ -124,15 +124,13 @@ def load_data_for_R(dataset_dir):
 
 #Fold_on
 def split_data(dataset, num_splits):
-    if num_splits == 1:
-        test_size = 0.1
-    else: test_size = 0.2
-    split = StratifiedShuffleSplit(n_splits=num_splits, test_size=test_size, random_state=42)
+    split = StratifiedKFold(n_splits=num_splits, random_state=42, shuffle=True)
     for train_index, dev_index in split.split(dataset, dataset["label"]):
         train_dataset = dataset.loc[train_index]
         dev_dataset = dataset.loc[dev_index]
     
         yield train_dataset, dev_dataset
+
 
 #no Fold
 #def split_data(dataset):
