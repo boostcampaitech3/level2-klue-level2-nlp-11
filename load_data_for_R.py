@@ -122,14 +122,26 @@ def load_data_for_R(dataset_dir):
 
     return dataset
 
-
-def split_data(dataset):
-    split = StratifiedShuffleSplit(n_splits=1, test_size=0.1, random_state=42)
+#Fold_on
+def split_data(dataset, num_splits):
+    if num_splits == 1:
+        test_size = 0.1
+    else: test_size = 0.2
+    split = StratifiedShuffleSplit(n_splits=num_splits, test_size=test_size, random_state=42)
     for train_index, dev_index in split.split(dataset, dataset["label"]):
         train_dataset = dataset.loc[train_index]
         dev_dataset = dataset.loc[dev_index]
     
-    return train_dataset,dev_dataset
+        yield train_dataset, dev_dataset
+
+#no Fold
+#def split_data(dataset):
+#    split = StratifiedShuffleSplit(n_splits=1, test_size=0.1, random_state=42)
+#    for train_index, dev_index in split.split(dataset, dataset["label"]):
+#        train_dataset = dataset.loc[train_index]
+#        dev_dataset = dataset.loc[dev_index]
+#    
+#    return train_dataset,dev_dataset
 
 
 # def convert_sentence_to_features(dataset, tokenizer, max_len):
