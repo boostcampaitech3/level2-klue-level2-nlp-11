@@ -44,16 +44,16 @@ def main():
     device = torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
     print(device)
 
+    MODEL_NAME = 'klue/roberta-large'
+    tokenizer = AutoTokenizer.from_pretrained(MODEL_NAME)
+    model_config =  AutoConfig.from_pretrained(MODEL_NAME)
+    model = R_BigBird(model_config, 0.1)
+
     dataset = load_data('../dataset/test/test_data.csv')
     tokenized_test = tokenized_dataset(dataset, tokenizer)
     tokenized_test = make_entity_mask(tokenized_test)
     test_label = list(map(int,dataset['label'].values))
     RE_dataset_test = RE_Dataset(tokenized_test, test_label)
-
-    MODEL_NAME = 'klue/roberta-large'
-    tokenizer = AutoTokenizer.from_pretrained(MODEL_NAME)
-    model_config =  AutoConfig.from_pretrained(MODEL_NAME)
-    model = R_BigBird(model_config, 0.1)
 
     probs = []
     for fold in range(1,6):

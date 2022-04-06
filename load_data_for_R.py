@@ -64,7 +64,7 @@ def tokenized_dataset(dataset, tokenizer):
             temp[row.sub_start_idx:row.sub_end_idx+1] = [f'^#{row.sub_type}#{row.sub_word}^']
 
         tokenized_sentences = tokenizer(
-            #f'^#{row.sub_type}#{row.sub_word}^'+' '+ f'@+{row.obj_type}+{row.obj_word}@',
+            f'^#{row.sub_type}#{row.sub_word}^'+' '+ f'@+{row.obj_type}+{row.obj_word}@',
                 ''.join(temp),
                 return_tensors="pt",
                 padding=False,
@@ -87,9 +87,9 @@ def make_entity_mask(tokens):
             
             # mask_temp[:, [start_idx,end_idx]] = 1 # ^,@ 위치에만 1 masking
 
-            # start_idx2 = sentence.index(tar, end_idx+1)
-            # end_idx2 = sentence.index(tar, start_idx2+ 1)
-            # mask_temp[:, start_idx2:end_idx2+1] = 1
+            start_idx2 = sentence.index(tar, end_idx+1)
+            end_idx2 = sentence.index(tar, start_idx2+ 1)
+            mask_temp[:, start_idx2:end_idx2+1] = 1
 
             token[name] = mask_temp
     return tokens
