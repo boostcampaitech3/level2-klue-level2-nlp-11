@@ -51,22 +51,25 @@ device = torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
 print(device)
 
 tokenizer = AutoTokenizer.from_pretrained('klue/roberta-large')
-
 model_config =  AutoConfig.from_pretrained('klue/roberta-large')
 model = R_BigBird(model_config, 0.1)
 model.model.resize_token_embeddings(tokenizer.vocab_size + 12)
-model.load_state_dict(torch.load('./best_model/pytorch_model.bin'))
-model.to(device)
 
 dataset = load_data_for_R('../dataset/test/test_data.csv')
-
 tokenized_train, train_label = convert_sentence_to_features(dataset, tokenizer, 256)
-
 RE_dataset = RE_Dataset_for_R(tokenized_train, train_label, train=False)
 
-output_pred, output_prob = inference(model, RE_dataset, device)
+probs=[]
+for fold in range(1,6):
+    model.load_state_dict(torch.load(f'./best_model/{fold}_best_model/pytorch_model.bin'))
+    model.to(device)
+    output_pred, output_prob = inference(model, RE_dataset, device)
+    probs.append(output_prob)
 
-original_label = num_to_label(output_pred)
+prob=sum(probs)/5
+pred = np.argmax(prob, axis=-1).tolist()
+prob = prob.tolist()
+original_label = num_to_label(pred)
 
 test = pd.read_csv('../dataset/test/test_data.csv')
 test_id = test['id'].to_list()
