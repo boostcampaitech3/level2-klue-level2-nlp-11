@@ -75,8 +75,8 @@ def train():
     dataset = load_data('../dataset/train/train.csv')
     #dataset = delete_outlier(dataset)
     num_splits = 5
-    
-    for fold, (train_dataset,dev_dataset) in enumerate(split_data(dataset, num_splits=num_splits), 1):
+    split = split_data(dataset, num_splits=num_splits)
+    for fold, (train_dataset,dev_dataset) in enumerate(split, 1):
         # tokenizing dataset
         tokenized_train = tokenized_dataset(train_dataset, tokenizer)
         tokenized_dev = tokenized_dataset(dev_dataset, tokenizer)
