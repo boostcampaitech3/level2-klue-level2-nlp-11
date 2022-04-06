@@ -74,7 +74,7 @@ original_label = num_to_label(pred)
 test = pd.read_csv('../dataset/test/test_data.csv')
 test_id = test['id'].to_list()
 
-output = pd.DataFrame({'id':test_id, 'pred_label':original_label, 'probs':output_prob})
+output = pd.DataFrame({'id':test_id, 'pred_label':original_label, 'probs':prob})
 
 output.to_csv('./prediction/submission.csv', index=False)
 
