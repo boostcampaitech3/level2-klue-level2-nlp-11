@@ -24,14 +24,16 @@ def inference(model, tokenized_sent, device):
                 labels = data['labels'].to(device)
             )
         logits = outputs[1]
-        for logit in logits:
-            prob = F.softmax(logit,dim=-1).detach().cpu().numpy().tolist()
-            logit = logit.detach().cpu().numpy()
-            result = np.argmax(logit)
-            
-            output_prob.append(prob)
-            output_pred.append(result)
-
+        prob = F.softmax(logits, dim=-1).detach().cpu().numpy()
+        output_prob.append(prob)
+        #for logit in logits:
+        #    prob = F.softmax(logit,dim=-1).detach().cpu().numpy().tolist()
+        #    logit = logit.detach().cpu().numpy()
+        #    result = np.argmax(logit)
+        #    
+        #    output_prob.append(prob)
+        #    output_pred.append(result)
+    output_prob = np.concatenate(output_prob, axis=0)
     return output_pred, output_prob
 
 def num_to_label(label):
@@ -66,7 +68,9 @@ for fold in range(1,6):
     output_pred, output_prob = inference(model, RE_dataset, device)
     probs.append(output_prob)
 
+
 prob=sum(probs)/5
+
 pred = np.argmax(prob, axis=-1).tolist()
 prob = prob.tolist()
 original_label = num_to_label(pred)
