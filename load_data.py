@@ -31,7 +31,6 @@ def preprocessing_dataset_for_R(dataset):
     # 데이터셋 데이터프레임을 가져와서 문장의 엔티티의 앞, 뒤에 스페셜 토큰을 넣어서 반환
     # subject_entity와 object_entity의 위치 정보를 가져와서
     # 위치 정보에 맞춰서 토큰 삽입
-    # dataset['']
     sub_df = dataset['subject_entity'].apply(pd.Series).add_prefix('sub_')
     obj_df = dataset['object_entity'].apply(pd.Series).add_prefix('obj_')
     dataset = pd.concat([dataset, sub_df], axis=1)
