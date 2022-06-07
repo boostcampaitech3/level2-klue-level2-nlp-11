@@ -61,7 +61,7 @@ python infernce.py
 - R-BERT의 Input Sequence를 BERT가 pretrain할 때 사용했던 Input과 같이 구성했습니다.
     - 기존 Sentence에 “*sub entity 와 obj entity의 관계는?”* 이라는 문장을 매 입력마다 추가해 주어 Input Sequence를 BERT pretrain input과 유사하게 구성했습니다.
 - Sequence의 매 Entity 마다 type_special_token, entity_token을 앞 뒤로 추가해 주었습니다.
-    - “이순신은 조선 중기의 무신이다.” → “$PER이순신PER$은 #DAT조선 중기DAT#의 무신이다.”
+    - “이순신은 조선 중기의 무신이다.” → “%PER이순신PER%은 #DAT조선 중기DAT#의 무신이다.”
 - 단순하게 R-BERT를 통하여 출력된 Sequence를 Fc Layer를 통하여 분류하는 것보다는 Sequence Data의 특성을 이용하기 위하여 LSTM에 한 번 더 통과한 후 fc layer를 이용하여 분류를 진행했습니다.
 - 길이가 비슷한 Sequence끼리 Batch를 구성하는 방식인 Sequence Bucketing을 사용하여 학습 속도를 개선했습니다.
 
