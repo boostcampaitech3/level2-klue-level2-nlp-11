@@ -73,11 +73,11 @@ python infernce.py
     - Back Translation
     - Random Masking
     - Token Deletion
-    - **QA 모델(실제 사용)**
+    - ***QA 모델(최종 모델 사용)***
 - Preprocess
     - 한자 → 한글
     - 특수 기호 제거
-    - **Typed** **Entity Marker(실제 사용)**
+    - ***Typed** **Entity Marker(최종 모델 사용)***
 
 **Model**
 
