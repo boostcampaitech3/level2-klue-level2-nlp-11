@@ -27,20 +27,11 @@ class R_BigBird(RobertaPreTrainedModel):
         self.model_config.num_labels = 30
         self.num_labels = 30
 
-
         self.hidden_dim = self.model_config.hidden_size
-
-  
-
 
         self.lstm= nn.LSTM(input_size= self.hidden_dim, hidden_size= self.hidden_dim, num_layers= 2, dropout= 0.2,
                            batch_first= True, bidirectional= True)
         self.fc= nn.Linear(self.hidden_dim*2, self.model_config.num_labels)
-
-
-
-
-
 
         self.cls_fc_layer = FCLayer(self.config.hidden_size, self.config.hidden_size, dropout_rate)
         self.entity_fc_layer1 = FCLayer(self.config.hidden_size, self.config.hidden_size, dropout_rate)
