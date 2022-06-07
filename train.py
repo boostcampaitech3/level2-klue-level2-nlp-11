@@ -72,20 +72,14 @@ def label_to_num(label):
 def train():
     set_seed(42)
     # load model and tokenizer
-    #tokenizer = AutoTokenizer.from_pretrained('./vocab_robertaLarge')
     tokenizer = AutoTokenizer.from_pretrained('klue/roberta-large')
     
-
     # load dataset
     dataset = load_data_for_R('../dataset/train/train_sub.csv')
 
-    #Yes Fold
     num_splits = 5
     for fold, (train_dataset,dev_dataset) in enumerate(split_data(dataset, num_splits=num_splits), 1):
-        #train_dataset, dev_dataset = split_data(dataset)
-
         # tokenizing dataset
-        #tokenized_train, train_label = convert_sentence_to_features(dataset, tokenizer, 256)
         tokenized_train, train_label = convert_sentence_to_features(train_dataset, tokenizer, 256)
         tokenized_dev, dev_label = convert_sentence_to_features(dev_dataset, tokenizer, 256)
 
@@ -106,7 +100,6 @@ def train():
 
         model = R_BigBird(model_config, 0.1)
         model.model.resize_token_embeddings(tokenizer.vocab_size + 12)
-        # print(model.config)
         # model.parameters
         model.to(device)
     
