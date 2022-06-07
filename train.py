@@ -7,8 +7,8 @@ import sklearn
 import numpy as np
 from sklearn.metrics import accuracy_score, recall_score, precision_score, f1_score
 from transformers import AutoTokenizer, AutoConfig, AutoModelForSequenceClassification, Trainer, TrainingArguments, RobertaConfig, RobertaTokenizer, RobertaForSequenceClassification, BertTokenizer, set_seed
-from load_data_for_R import *
-from model_for_R import R_BigBird
+from load_data import *
+from model import R_BigBird
 import wandb
 
 wandb.init(project='klue', entity='klue')
@@ -93,7 +93,6 @@ def train():
 
         device = torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
 
-        print(device)
         # setting model hyperparameter
         model_config =  AutoConfig.from_pretrained('klue/roberta-large')
         # model_config.num_labels = 30
