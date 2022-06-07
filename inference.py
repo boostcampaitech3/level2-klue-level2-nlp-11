@@ -1,8 +1,8 @@
 from transformers import AutoTokenizer, AutoModelForSequenceClassification, AutoModel, BigBirdModel, AutoConfig
 import torch
 from torch.utils.data import DataLoader
-from load_data_for_R import *
-from model_for_R import *
+from load_data import *
+from model import *
 from tqdm import tqdm
 import numpy as np
 import torch.nn.functional as F
@@ -26,13 +26,7 @@ def inference(model, tokenized_sent, device):
         logits = outputs[1]
         prob = F.softmax(logits, dim=-1).detach().cpu().numpy()
         output_prob.append(prob)
-        #for logit in logits:
-        #    prob = F.softmax(logit,dim=-1).detach().cpu().numpy().tolist()
-        #    logit = logit.detach().cpu().numpy()
-        #    result = np.argmax(logit)
-        #    
-        #    output_prob.append(prob)
-        #    output_pred.append(result)
+
     output_prob = np.concatenate(output_prob, axis=0)
     return output_pred, output_prob
 
